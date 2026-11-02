@@ -1,0 +1,2640 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Акт визуального осмотра электромонтажных работ</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; overflow-x: hidden; }
+  body {
+    font-family: "Times New Roman", "Liberation Serif", serif;
+    font-size: 12px;
+    background: #e8e8e8;
+    color: #000;
+    padding: 16px;
+  }
+  body.modal-open { overflow: hidden; }
+
+  .page {
+    background: #fff;
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 20px 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.15);
+    line-height: 1.3;
+  }
+
+  /* ---------- Шапка ---------- */
+  .title-1 { font-size: 14px; font-weight: bold; margin: 0 0 2px 0; text-align: center; }
+  .title-2 { font-size: 12px; font-weight: bold; margin: 0 0 12px 0; letter-spacing: .5px; text-align: center; }
+  .title-1 input { text-align: center; }
+
+  .city-date {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    margin: 6px 0 12px 0;
+    font-size: 12px;
+  }
+
+  .city-date > span:last-child { margin-left: auto; }
+
+  .date-btn {
+    border: 1px solid #999;
+    background: #fff;
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-left: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.2;
+    vertical-align: middle;
+  }
+  .date-btn:hover { background: #eef6ff; }
+
+  /* На сенсорных экранах кнопку календаря удобнее нажимать */
+  @media (pointer: coarse) {
+    .date-btn { min-width: 34px; min-height: 34px; font-size: 16px; padding: 4px 8px; }
+  }
+
+  /* ---------- Строки «Объект / Объект осмотра» ---------- */
+  .field-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 2px 0;
+  }
+  .field-line .label {
+    white-space: nowrap;
+    font-weight: bold;
+    padding-top: 2px;
+  }
+  .field-line .value,
+  .print-value {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 18px;
+    height: 18px;
+    border-bottom: 1px solid #000;
+    padding: 0 2px;
+    margin: 0;
+    background: transparent;
+    border-top: none; border-left: none; border-right: none;
+    border-radius: 0;
+    font: inherit;
+    line-height: 1.1;
+    display: block;
+  }
+  .field-line .value:focus { outline: none; background: #eef6ff; }
+
+  /* Статичная копия многострочного поля (для «Сохранить HTML» и печати) */
+  .print-value {
+    height: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+
+  .caption {
+    text-align: center;
+    font-size: 9px;
+    color: #444;
+    margin: 1px 0 6px 0;
+    font-style: italic;
+    width: 100%;
+  }
+
+  /* ---------- Секции ---------- */
+  .section-title {
+    font-weight: bold;
+    font-size: 12px;
+    margin: 12px 0 4px 0;
+  }
+
+  /* ---------- Блок члена комиссии / представителя ---------- */
+  .person-row {
+    display: grid;
+    grid-template-columns: 3fr 0.2fr 2.6fr 0.2fr 3fr;
+    gap: 0;
+    margin: 2px 0;
+    align-items: stretch;
+  }
+  .person-row .cell { position: relative; }
+  .person-row .spacer { visibility: hidden; }
+
+  .cell-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid #000;
+    padding: 2px 4px;
+    font: inherit;
+    background: transparent;
+    min-height: 20px;
+  }
+  .cell-input:focus { outline: none; background: #eef6ff; }
+  .cell-input[readonly] { background: transparent; cursor: default; }
+
+  /* Подсветка полей, заполненных из справочника */
+  @keyframes autofillFlash {
+    from { background-color: #d7f0d7; }
+    to   { background-color: transparent; }
+  }
+  .cell-input.autofilled { animation: autofillFlash 1.2s ease-out; }
+
+  /* ---------- Поле подписи ---------- */
+  .sign-cell {
+    width: 100%;
+    min-height: 40px;
+    border-bottom: 1px solid #000;
+    background: #fbfbfb;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 10px;
+    user-select: none;
+  }
+  .sign-cell:hover { background: #eef6ff; }
+  .sign-cell img { max-width: 100%; max-height: 56px; display: block; }
+  .sign-cell.signed { background: #fff; color: transparent; }
+  .sign-cell .placeholder {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sign-cell.signed .placeholder { display: none; }
+
+  /* ---------- Текстовые блоки ---------- */
+  .text-block { margin: 8px 0; font-size: 12px; text-align: justify; }
+
+  /* ---------- Период работ ---------- */
+  .period-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+    font-size: 12px;
+  }
+  .period-row .date-part { display: inline-flex; align-items: baseline; }
+  .month-input { width: 95px; }
+
+  /* ---------- Таблица работ ---------- */
+  table.works {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0;
+    font-size: 12px;
+    table-layout: fixed;
+  }
+  table.works th, table.works td {
+    border: 1px solid #000;
+    padding: 3px 4px;
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  table.works th {
+    background: #f0f0f0;
+    font-weight: bold;
+    text-align: center;
+  }
+  table.works td.num { text-align: center; width: 40px; }
+  table.works td.work-cell { width: 45%; }
+  table.works td.remark-cell { width: 30%; }
+  table.works td.fix-cell { width: 25%; }
+
+  .editable-cell {
+    width: 100%;
+    min-height: 18px;
+    padding: 0;
+    outline: none;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.3;
+  }
+  .editable-cell:focus { background: #eef6ff; }
+  .editable-cell:empty:before {
+    content: attr(data-placeholder);
+    color: #999;
+    pointer-events: none;
+  }
+
+  /* Ячейка «Отметка об устранении» */
+  .fix-wrapper { display: flex; flex-direction: column; gap: 2px; }
+  .fix-date-row { display: flex; align-items: center; gap: 2px; }
+  .fix-date {
+    border: none;
+    border-bottom: 1px dashed #999;
+    font: inherit;
+    background: transparent;
+    padding: 1px 2px;
+    font-size: 11px;
+    flex: 1;
+    min-width: 0;
+  }
+  .fix-date:focus { outline: none; background: #eef6ff; }
+  .fix-sign {
+    border: 1px dashed #bbb;
+    min-height: 30px;
+    cursor: pointer;
+    background: #fafafa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: #999;
+    position: relative;
+  }
+  .fix-sign:hover { background: #eef6ff; }
+  .fix-sign img { max-width: 100%; max-height: 40px; }
+  .fix-sign.signed { background: #fff; color: transparent; }
+
+  /* ---------- Кнопки управления таблицей ---------- */
+  .table-controls { display: flex; gap: 8px; margin-bottom: 12px; }
+  .table-controls button {
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid #999;
+    background: #f9f9f9;
+    border-radius: 4px;
+  }
+  .table-controls button:hover { background: #eef6ff; }
+
+  .disclaimer {
+    font-size: 10px;
+    font-style: italic;
+    text-align: justify;
+    margin: 12px 0;
+  }
+
+  /* ---------- Тулбар ---------- */
+  .toolbar {
+    max-width: 850px;
+    margin: 16px auto 0;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .toolbar button {
+    padding: 10px 18px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid #333;
+    background: #fff;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+  }
+  .toolbar button.primary { background: #1976d2; color: #fff; border-color: #1976d2; }
+  .toolbar button:hover { opacity: .85; }
+
+  /* ---------- Модальные окна ---------- */
+  .modal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.65);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal.open { display: flex; }
+  .modal-content {
+    background: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 640px;
+    font-family: Arial, sans-serif;
+  }
+  .modal-content h3 { margin: 0 0 10px 0; font-size: 16px; }
+  .modal canvas {
+    width: 100%;
+    height: 320px;
+    max-height: 45vh;
+    border: 1px solid #999;
+    background: #fff;
+    touch-action: none;
+    cursor: crosshair;
+    display: block;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .modal-actions button {
+    padding: 8px 16px;
+    font-size: 14px;
+    border: 1px solid #333;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .modal-actions button.primary { background: #1976d2; color: #fff; border-color: #1976d2; }
+  .modal-actions button.danger { color: #d32f2f; border-color: #d32f2f; }
+
+  /* ---------- Календарь ---------- */
+  .date-modal-content { max-width: 380px; max-height: 92vh; overflow-y: auto; }
+  .cal-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .cal-nav {
+    width: 32px; height: 32px;
+    padding: 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+  .cal-nav:hover { background: #eef6ff; }
+  .cal-title {
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+    font-size: 15px;
+  }
+  .cal-weekdays, .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .cal-weekdays div {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    padding: 4px 0;
+  }
+  .cal-grid { grid-auto-rows: 36px; }
+  .cal-day {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: #fff;
+    color: #222;
+    font: 13px Arial, sans-serif;
+    cursor: pointer;
+    padding: 0;
+  }
+  .cal-day:hover { background: #eef6ff; }
+  .cal-day.other { visibility: hidden; }
+  .cal-day.today { border-color: #1976d2; }
+  .cal-day.selected { background: #1976d2; color: #fff; }
+  .cal-day.weekend { color: #c62828; }
+  .cal-day.selected.weekend { color: #fff; }
+  .cal-actions { margin-top: 12px; }
+
+  /* ---------- Настройки списков ---------- */
+  .settings-content {
+    max-width: 760px;
+    max-height: 92vh;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .settings-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .settings-head h3 { margin: 0; }
+  .icon-btn {
+    border: none;
+    background: transparent;
+    color: #666;
+    font-size: 26px;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+  }
+  .icon-btn:hover { color: #000; }
+  .settings-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+    min-width: 0;
+    margin: 10px 0;
+    padding-right: 4px;
+  }
+  .settings-section {
+    border-top: 1px solid #e3e3e3;
+    margin-top: 12px;
+    padding-top: 10px;
+    min-width: 0;
+  }
+  .settings-body .settings-section:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+  }
+  .settings-section h4 { margin: 0 0 6px; font-size: 14px; }
+  .hint {
+    margin: 0 0 8px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #666;
+  }
+  .people-head, .people-row {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1.2fr 32px;
+    gap: 4px;
+  }
+  .people-head { font-size: 11px; color: #666; margin-bottom: 4px; }
+  .people-table { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .people-row input {
+    width: 100%;
+    min-width: 0;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font: 12px Arial, sans-serif;
+  }
+  .people-row input:focus { outline: 2px solid #90caf9; border-color: #1976d2; }
+  .del-person {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #c62828;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .del-person:hover { background: #ffebee; }
+  .settings-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; min-width: 0; max-width: 100%; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 3px 4px 3px 10px;
+    border: 1px solid #cfd8e3;
+    border-radius: 14px;
+    background: #f5f8fc;
+    font-size: 12px;
+  }
+  .chip > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chip button {
+    border: none;
+    background: transparent;
+    color: #777;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    cursor: pointer;
+  }
+  .chip button:hover { color: #c62828; }
+  .chip-empty { color: #999; font-size: 12px; font-style: italic; }
+  .chip-add { display: flex; gap: 6px; }
+  .chip-add input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font: 12px Arial, sans-serif;
+  }
+  .settings-foot {
+    border-top: 1px solid #e3e3e3;
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .settings-foot-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .storage-note { font-size: 11px; color: #666; }
+  .storage-note.warn { color: #b26a00; }
+
+  /* Общие кнопки в модальных окнах настроек */
+  .btn {
+    padding: 6px 12px;
+    border: 1px solid #999;
+    border-radius: 4px;
+    background: #fff;
+    font: 12px Arial, sans-serif;
+    cursor: pointer;
+  }
+  .btn:hover { background: #eef6ff; }
+  .btn.primary { background: #1976d2; border-color: #1976d2; color: #fff; }
+  .btn.danger { color: #c62828; border-color: #c62828; }
+
+  /* ---------- Уведомления ---------- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font: 13px Arial, sans-serif;
+    z-index: 2100;
+    max-width: 90vw;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #c62828; }
+
+  /* ---------- Статичная копия ---------- */
+  span.cell-input { display: inline-block; vertical-align: bottom; }
+  span.fix-date { display: inline-block; }
+
+  /* ---------- Мобильная вёрстка настроек ---------- */
+  @media (max-width: 600px) {
+    .people-head { display: none; }
+    .people-row { grid-template-columns: 1fr 34px; }
+    .people-row input[data-k="fio"] { grid-column: 1; grid-row: 1; }
+    .people-row input[data-k="position"] { grid-column: 1 / -1; grid-row: 2; }
+    .people-row input[data-k="org"] { grid-column: 1 / -1; grid-row: 3; }
+    .people-row .del-person { grid-column: 2; grid-row: 1; }
+    .settings-foot-row { justify-content: stretch; }
+    .settings-foot-row .btn { flex: 1 1 calc(50% - 6px); }
+    .cal-grid { grid-auto-rows: 42px; }
+    .cal-day { font-size: 14px; }
+  }
+
+  /* ---------- Узкие экраны: компактные поля дат ---------- */
+  @media (max-width: 430px) {
+    .month-input { width: 72px; }
+    #dateYear, #workStartYear, #workEndYear { width: 48px !important; }
+    .date-btn { min-width: 30px; min-height: 30px; font-size: 14px; padding: 2px 5px; }
+    .fix-date-row .date-btn { min-width: 26px; min-height: 26px; font-size: 11px; padding: 1px 2px; }
+    .fix-date { font-size: 10px; }
+  }
+
+  /* ---------- Печать / PDF ---------- */
+  @page { margin: 10mm; }
+  @media print {
+    body { background: #fff; padding: 0; font-size: 11px; }
+    body.modal-open { overflow: visible; }
+    .page { box-shadow: none; padding: 0; max-width: none; margin: 0; width: 100%; }
+    .no-print { display: none !important; }
+    .modal, .toast { display: none !important; }
+
+    /* Кнопки календаря не печатаем */
+    .date-btn {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      width: 0 !important;
+      height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: none !important;
+    }
+
+    /* Плейсхолдеры не печатаем */
+    ::placeholder { color: transparent !important; opacity: 0 !important; }
+    .editable-cell:empty:before { display: none !important; }
+    .sign-cell .placeholder, .fix-sign .placeholder { display: none !important; }
+
+    .cell-input, .fix-date, .field-line .value {
+      border-bottom: 1px solid #000 !important;
+      background: transparent !important;
+      resize: none !important;
+      overflow: hidden !important;
+    }
+
+    .field-line .print-value {
+      flex: 1;
+      min-width: 0;
+      min-height: 18px;
+      height: auto;
+      padding: 0 2px;
+      border-bottom: 1px solid #000;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.2;
+    }
+
+    /* Пустую подпись в таблице не печатаем */
+    .fix-sign:not(.signed) {
+      border: none !important;
+      background: transparent !important;
+      min-height: 0 !important;
+      height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    /* Пустую дату не подчёркиваем */
+    .fix-date:placeholder-shown { border-bottom: none !important; }
+
+    .sign-cell, .fix-sign.signed {
+      background: #fff !important;
+      border-bottom: 1px solid #000 !important;
+    }
+
+    .person-row { page-break-inside: avoid; }
+    table.works tr { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page" id="actPage">
+
+  <!-- ШАПКА -->
+  <div class="title-1">
+    А К Т № <input id="actNumber" class="cell-input" style="display:inline-block;width:120px;font-weight:bold;" autocomplete="off" />
+  </div>
+  <div class="title-2">ВИЗУАЛЬНОГО ОСМОТРА ЭЛЕКТРОМОНТАЖНЫХ РАБОТ</div>
+
+  <div class="city-date">
+    <span>г. Москва</span>
+    <span>
+      «<input id="dateDay" class="cell-input" style="display:inline-block;width:44px;text-align:center;" autocomplete="off" />»
+      <input id="dateMonth" class="cell-input month-input" style="display:inline-block;text-align:center;" autocomplete="off" />
+      <input id="dateYear" class="cell-input" style="display:inline-block;width:64px;text-align:center;" value="2026" autocomplete="off" /> г.
+      <button type="button" class="date-btn" onclick="openDatePicker(this, 'actDate')" title="Выбрать дату" aria-label="Выбрать дату акта">📅</button>
+    </span>
+  </div>
+
+  <!-- ОБЪЕКТ -->
+  <div class="field-line">
+    <span class="label">Объект:</span>
+    <input id="objectName" class="value" type="text" list="dlObjects" autocomplete="off">
+  </div>
+  <div class="caption">(наименование объекта)</div>
+
+  <!-- ОБЪЕКТ ОСМОТРА -->
+  <div class="field-line">
+    <span class="label">Объект осмотра:</span>
+    <input id="roomName" class="value" type="text" list="dlInspectionObjects" autocomplete="off">
+  </div>
+  <div class="caption">(наименование помещения)</div>
+
+  <!-- КОМИССИЯ -->
+  <div class="section-title">Комиссия в составе представителей:</div>
+  <div id="commissionList"></div>
+
+  <!-- ВВОДНЫЙ ТЕКСТ -->
+  <div class="text-block">
+    произвела визуальный осмотр состояния скрытых элементов электромонтажных работ,
+    выполненных монтажной организацией, доступных для визуального контроля на момент
+    проведения осмотра.
+  </div>
+
+  <!-- ПЕРИОД РАБОТ -->
+  <div class="period-row">
+    <span>Работы выполнялись в период с</span>
+    <span class="date-part">
+      «<input id="workStartDay" class="cell-input" style="display:inline-block;width:44px;text-align:center;" autocomplete="off" />»
+      <input id="workStartMonth" class="cell-input month-input" style="display:inline-block;text-align:center;" autocomplete="off" />
+      <input id="workStartYear" class="cell-input" style="display:inline-block;width:64px;text-align:center;" value="2026" autocomplete="off" /> г.
+      <button type="button" class="date-btn" onclick="openDatePicker(this, 'workStart')" title="Выбрать дату начала работ" aria-label="Выбрать дату начала работ">📅</button>
+    </span>
+    <span>по</span>
+    <span class="date-part">
+      «<input id="workEndDay" class="cell-input" style="display:inline-block;width:44px;text-align:center;" autocomplete="off" />»
+      <input id="workEndMonth" class="cell-input month-input" style="display:inline-block;text-align:center;" autocomplete="off" />
+      <input id="workEndYear" class="cell-input" style="display:inline-block;width:64px;text-align:center;" value="2026" autocomplete="off" /> г.
+      <button type="button" class="date-btn" onclick="openDatePicker(this, 'workEnd')" title="Выбрать дату окончания работ" aria-label="Выбрать дату окончания работ">📅</button>
+    </span>
+  </div>
+
+  <!-- ПРИ ОСМОТРЕ УСТАНОВЛЕНО -->
+  <div class="section-title">При осмотре установлено:</div>
+
+  <table class="works" id="worksTable">
+    <thead>
+      <tr>
+        <th style="width:40px;">№ п/п</th>
+        <th style="width:45%;">Виды работ</th>
+        <th style="width:30%;">Замечания</th>
+        <th style="width:25%;">Отметка об устранении (дата/подпись)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="table-controls no-print">
+    <button type="button" onclick="addTableRow()">+ Добавить строку</button>
+    <button type="button" onclick="removeTableRow()">- Удалить последнюю</button>
+  </div>
+
+  <!-- ДИСКЛЕЙМЕР -->
+  <div class="disclaimer">
+    Настоящий акт составлен исключительно для фиксации факта проведения визуального
+    осмотра и состояния доступных для контроля элементов электромонтажных работ на дату
+    его составления.
+  </div>
+
+  <!-- ПРЕДСТАВИТЕЛИ -->
+  <div class="section-title">Представители:</div>
+  <div id="representativesList"></div>
+
+</div>
+
+<!-- КНОПКИ -->
+<div class="toolbar no-print">
+  <button type="button" onclick="returnToApp()">← В приложение</button>
+  <button type="button" class="primary" onclick="printPdf()">📄 Сохранить PDF</button>
+  <button type="button" onclick="saveHtml()">💾 Сохранить HTML</button>
+  <button type="button" onclick="openSettings()">⚙ Настройки списков</button>
+  <button type="button" onclick="clearAll()">🗑 Очистить</button>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ПОДПИСИ -->
+<div class="modal no-print" id="sigModal" role="dialog" aria-modal="true" aria-labelledby="sigModalTitle">
+  <div class="modal-content">
+    <h3 id="sigModalTitle">Поставьте подпись</h3>
+    <canvas id="sigCanvas"></canvas>
+    <div class="modal-actions">
+      <div>
+        <button type="button" onclick="clearSig()">Очистить</button>
+        <button type="button" onclick="deleteSig()" id="btnDeleteSig" class="danger" style="display:none;">🗑 Удалить</button>
+      </div>
+      <div>
+        <button type="button" onclick="closeSig()">Отмена</button>
+        <button type="button" class="primary" onclick="confirmSig()">Готово</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО КАЛЕНДАРЯ -->
+<div class="modal no-print" id="dateModal" role="dialog" aria-modal="true" aria-labelledby="dateModalTitle">
+  <div class="modal-content date-modal-content">
+    <h3 id="dateModalTitle">Выбор даты</h3>
+
+    <div class="cal-header">
+      <button type="button" class="cal-nav" onclick="calShiftYear(-1)" title="Предыдущий год" aria-label="Предыдущий год">«</button>
+      <button type="button" class="cal-nav" onclick="calShiftMonth(-1)" title="Предыдущий месяц" aria-label="Предыдущий месяц">‹</button>
+      <div class="cal-title" id="calTitle"></div>
+      <button type="button" class="cal-nav" onclick="calShiftMonth(1)" title="Следующий месяц" aria-label="Следующий месяц">›</button>
+      <button type="button" class="cal-nav" onclick="calShiftYear(1)" title="Следующий год" aria-label="Следующий год">»</button>
+    </div>
+
+    <div class="cal-weekdays" aria-hidden="true">
+      <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+    </div>
+    <div class="cal-grid" id="calGrid" role="grid" aria-label="Календарь"></div>
+
+    <div class="modal-actions cal-actions">
+      <div>
+        <button type="button" onclick="calGoToday()">Сегодня</button>
+        <button type="button" onclick="calClearDate()">Очистить</button>
+      </div>
+      <div>
+        <button type="button" onclick="closeDatePicker()">Отмена</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО НАСТРОЕК СПИСКОВ -->
+<div class="modal no-print" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal-content settings-content">
+    <div class="settings-head">
+      <h3 id="settingsTitle">⚙ Настройки списков</h3>
+      <button type="button" class="icon-btn" onclick="closeSettings()" title="Закрыть" aria-label="Закрыть">×</button>
+    </div>
+
+    <div class="settings-body">
+      <section class="settings-section">
+        <h4>Автозаполнение по ФИО</h4>
+        <p class="hint">
+          При выборе фамилии из списка должность и организация подставляются автоматически.
+          В самом акте эти поля остаются редактируемыми.
+        </p>
+        <div class="people-head">
+          <div>ФИО</div><div>Должность</div><div>Организация</div><div></div>
+        </div>
+        <div class="people-table" id="settingsPeople"></div>
+        <div class="settings-actions">
+          <button type="button" class="btn" onclick="addPersonDraft()">+ Добавить человека</button>
+          <button type="button" class="btn" onclick="takePeopleFromAct()">↙ Взять людей из акта</button>
+          <button type="button" class="btn danger" onclick="resetSettingsDraft()">Сбросить к заводским</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h4>Организации</h4>
+        <div class="chips" id="chipsOrgs"></div>
+        <div class="chip-add">
+          <input type="text" id="newOrg" placeholder="Новая организация" autocomplete="off">
+          <button type="button" class="btn" onclick="addChipFromInput('orgs', 'newOrg')">+</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h4>Должности</h4>
+        <div class="chips" id="chipsPositions"></div>
+        <div class="chip-add">
+          <input type="text" id="newPosition" placeholder="Новая должность" autocomplete="off">
+          <button type="button" class="btn" onclick="addChipFromInput('positions', 'newPosition')">+</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h4>Объекты</h4>
+        <div class="chips" id="chipsObjects"></div>
+        <div class="chip-add">
+          <input type="text" id="newObject" placeholder="Новый объект" autocomplete="off">
+          <button type="button" class="btn" onclick="addChipFromInput('objects', 'newObject')">+</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h4>Объекты осмотра</h4>
+        <div class="chips" id="chipsRooms"></div>
+        <div class="chip-add">
+          <input type="text" id="newRoom" placeholder="Новый объект осмотра" autocomplete="off">
+          <button type="button" class="btn" onclick="addChipFromInput('rooms', 'newRoom')">+</button>
+        </div>
+      </section>
+
+      <p class="hint" style="margin-top:10px;">
+        Новые значения появятся в выпадающих списках акта после нажатия «Сохранить».
+        Настройки хранятся в этом браузере.
+      </p>
+    </div>
+
+    <div class="settings-foot">
+      <div class="storage-note" id="storageNote"></div>
+      <div class="settings-foot-row">
+        <button type="button" class="btn" onclick="exportSettings()">⬇ Экспорт JSON</button>
+        <button type="button" class="btn" onclick="pickSettingsFile()">⬆ Импорт JSON</button>
+        <button type="button" class="btn" onclick="closeSettings()">Отмена</button>
+        <button type="button" class="btn primary" onclick="saveSettingsFromModal()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Скрытое поле для импорта настроек -->
+<input type="file" id="settingsFileInput" accept="application/json,.json" style="display:none" aria-hidden="true">
+
+<!-- Уведомления -->
+<div class="toast no-print" id="toast" role="status" aria-live="polite"></div>
+
+<!-- DATALIST'ы: заполняются из настроек при запуске -->
+<datalist id="dlObjects"></datalist>
+<datalist id="dlInspectionObjects"></datalist>
+<datalist id="dlOrganizations"></datalist>
+<datalist id="dlPositions"></datalist>
+<datalist id="dlFullNames"></datalist>
+<datalist id="dlRepresentativeOrgs"></datalist>
+
+<script>
+'use strict';
+
+/* ============================================================================
+   1. КОНСТАНТЫ И ЗАВОДСКИЕ НАСТРОЙКИ
+   ============================================================================ */
+
+const COMMISSION_COUNT = 5;
+const REPRESENTATIVES_COUNT = 5;
+const DEFAULT_WORKS_COUNT = 12;
+
+const STORAGE_KEY = 'aktOsmSettings_v2';
+const SETTINGS_VERSION = 2;
+
+/* Месяцы в родительном падеже — для полей «12 ноября 2026». */
+const MONTHS_GENITIVE = [
+  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+];
+
+/* Месяцы в именительном падеже — для заголовка календаря. */
+const MONTHS_NOMINATIVE = [
+  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+];
+
+/* Формы написания месяца, которые принимаем при ручном вводе. */
+const MONTH_FORMS = [
+  ['января', 'январь', 'янв'],
+  ['февраля', 'февраль', 'фев', 'февр'],
+  ['марта', 'март', 'мар'],
+  ['апреля', 'апрель', 'апр'],
+  ['мая', 'май'],
+  ['июня', 'июнь', 'июн'],
+  ['июля', 'июль', 'июл'],
+  ['августа', 'август', 'авг'],
+  ['сентября', 'сентябрь', 'сен', 'сент'],
+  ['октября', 'октябрь', 'окт'],
+  ['ноября', 'ноябрь', 'ноя', 'нояб'],
+  ['декабря', 'декабрь', 'дек']
+];
+
+const WEEKDAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+/* Заводские значения. Используются при первом запуске и по кнопке «Сбросить». */
+const DEFAULT_SETTINGS = {
+  version: SETTINGS_VERSION,
+  people: [
+    { fio: 'Гагарин П.А.', position: 'Главный специалист', org: 'АНО «КВБ»' },
+    { fio: 'Хитрых И.А.', position: 'Руководитель ЭЛ', org: 'ООО «МСЦ»' },
+    { fio: 'Мгоян Р.М.', position: 'Зам. руководителя ЭЛ', org: 'ООО «МСЦ»' },
+    { fio: 'Хван И.Р.', position: 'Ведущий специалист', org: 'ГБУ «Московские ярмарки»' },
+    { fio: 'Дворецкий Р.С.', position: '', org: '' },
+    { fio: 'Караткевич В.А.', position: '', org: '' },
+    { fio: 'Жирнов П.А.', position: '', org: '' },
+    { fio: 'Густомясов Е.Е.', position: '', org: '' }
+  ],
+  orgs: [
+    'АНО «КВБ»',
+    'ООО «МСЦ»',
+    'ООО «Город Мастеров»',
+    'ООО «ПФК Зодчий»',
+    'ООО «Ухоженный сад»',
+    'ГБУ «Московские ярмарки»'
+  ],
+  positions: [
+    'Главный специалист',
+    'Руководитель ЭЛ',
+    'Зам. руководителя ЭЛ',
+    'Мастер',
+    'Начальник участка',
+    'Администратор',
+    'Руководитель проекта',
+    'Ведущий специалист',
+    'Бригадир'
+  ],
+  objects: [
+    'МПК "Северное Тушино" по адресу г. Москва, СЗАО район Северное Тушино, ул. Свободы вл. 50-70',
+    'Сборно-разборные конструкции в стиле "Царицынский" по адресу: г. Москва, ЮАО, ГМЗ "Царицыно", ул. Дольская, вл. 1, 7 КПП'
+  ],
+  rooms: [
+    'Система наружного электроосвещения',
+    'Помещение:'
+  ]
+};
+
+/* ============================================================================
+   2. УТИЛИТЫ
+   ============================================================================ */
+
+function pad2(number) {
+  return String(number).padStart(2, '0');
+}
+
+/* Экранирование значений перед вставкой в HTML-строку. */
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* Схлопываем пробелы и убираем неразрывные пробелы по краям. */
+function normalizeSpaces(value) {
+  return String(value == null ? '' : value)
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/* Ключ ФИО: без различия регистра, пробелов и точек («Гагарин П.А.» = «гагарин п.а»). */
+function normalizeFio(value) {
+  return normalizeSpaces(value)
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[.\s]/g, '');
+}
+
+/* Обычный ключ для сравнения строк списков. */
+function normalizeKey(value) {
+  return normalizeSpaces(value).toLowerCase().replace(/ё/g, 'е');
+}
+
+/* Удаляем пустые и повторяющиеся значения (без различия регистра). */
+function uniqueStrings(values) {
+  const result = [];
+  const seen = new Set();
+  values.forEach(value => {
+    const text = normalizeSpaces(value);
+    if (!text) return;
+    const key = normalizeKey(text);
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(text);
+  });
+  return result;
+}
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function formatIsoDate(date) {
+  return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+}
+
+function parseIsoDate(iso) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const date = new Date(year, month, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return null;
+  return date;
+}
+
+function formatRuDate(date) {
+  return pad2(date.getDate()) + '.' + pad2(date.getMonth() + 1) + '.' + date.getFullYear();
+}
+
+function parseRuDate(text) {
+  const match = /^\s*(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})\s*$/.exec(String(text || ''));
+  if (!match) return null;
+  let year = Number(match[3]);
+  if (year < 100) year += 2000;
+  const day = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const date = new Date(year, month, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return null;
+  return date;
+}
+
+/* Возвращает номер месяца (0–11) по названию, сокращению или числу. */
+function monthIndexByName(value) {
+  const key = normalizeKey(value).replace(/[.\s]/g, '');
+  if (!key) return -1;
+  if (/^\d{1,2}$/.test(key)) {
+    const number = Number(key);
+    return number >= 1 && number <= 12 ? number - 1 : -1;
+  }
+  for (let month = 0; month < MONTH_FORMS.length; month++) {
+    const forms = MONTH_FORMS[month];
+    for (let i = 0; i < forms.length; i++) {
+      if (normalizeKey(forms[i]).replace(/[.\s]/g, '') === key) return month;
+    }
+  }
+  return -1;
+}
+
+function findPersonByFio(value) {
+  const key = normalizeFio(value);
+  if (!key || !settings || !Array.isArray(settings.people)) return null;
+  return settings.people.find(person => normalizeFio(person.fio) === key) || null;
+}
+
+/* ============================================================================
+   3. УВЕДОМЛЕНИЯ
+   ============================================================================ */
+
+let toastTimer = null;
+
+function showToast(message, type) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = String(message || '');
+  toast.className = 'toast no-print show' + (type === 'error' ? ' error' : '');
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    toast.className = 'toast no-print' + (type === 'error' ? ' error' : '');
+  }, type === 'error' ? 5000 : 2600);
+}
+
+/* ============================================================================
+   4. ХРАНЕНИЕ НАСТРОЕК
+   ============================================================================ */
+
+let storageOk = true;      // доступно ли localStorage
+let settings = null;       // действующие настройки
+let draftSettings = null;  // черновик в открытом окне настроек
+
+function checkStorage() {
+  try {
+    const probe = '__akt_osm_probe__';
+    window.localStorage.setItem(probe, '1');
+    window.localStorage.removeItem(probe);
+    return true;
+  } catch (error) {
+    console.warn('localStorage недоступен:', error);
+    return false;
+  }
+}
+
+/* Проверка и очистка массива людей из JSON/localStorage. */
+function sanitizePeople(raw) {
+  if (!Array.isArray(raw)) return null;
+  const result = [];
+  const seen = new Set();
+  raw.forEach(item => {
+    if (!item || typeof item !== 'object') return;
+    const fio = normalizeSpaces(item.fio);
+    if (!fio) return;
+    const key = normalizeFio(fio);
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push({
+      fio: fio,
+      position: normalizeSpaces(item.position),
+      org: normalizeSpaces(item.org)
+    });
+  });
+  return result;
+}
+
+function sanitizeStringList(raw) {
+  if (!Array.isArray(raw)) return null;
+  return uniqueStrings(raw.filter(item => typeof item === 'string'));
+}
+
+function loadSettings() {
+  const defaults = deepClone(DEFAULT_SETTINGS);
+  if (!storageOk) return defaults;
+
+  let raw = null;
+  try {
+    raw = window.localStorage.getItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn('Не удалось прочитать localStorage:', error);
+    return defaults;
+  }
+  if (!raw) return defaults;
+
+  try {
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== 'object') throw new Error('Ожидался объект настроек');
+    return {
+      version: SETTINGS_VERSION,
+      people: sanitizePeople(data.people) || defaults.people,
+      orgs: sanitizeStringList(data.orgs) || defaults.orgs,
+      positions: sanitizeStringList(data.positions) || defaults.positions,
+      objects: sanitizeStringList(data.objects) || defaults.objects,
+      rooms: sanitizeStringList(data.rooms) || defaults.rooms
+    };
+  } catch (error) {
+    console.warn('Настройки повреждены, используем заводские:', error);
+    return defaults;
+  }
+}
+
+function saveSettingsToStorage(nextSettings) {
+  if (!storageOk) return false;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSettings));
+    return true;
+  } catch (error) {
+    console.warn('Не удалось сохранить настройки:', error);
+    return false;
+  }
+}
+
+/* ============================================================================
+   5. ВЫПАДАЮЩИЕ СПИСКИ
+   ============================================================================ */
+
+function fillDatalist(id, values) {
+  const list = document.getElementById(id);
+  if (!list) return;
+  list.innerHTML = '';
+  const seen = new Set();
+  values.forEach(value => {
+    const text = normalizeSpaces(value);
+    if (!text) return;
+    const key = normalizeKey(text);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const option = document.createElement('option');
+    option.value = text;
+    list.appendChild(option);
+  });
+}
+
+function refreshDatalists() {
+  if (!settings) return;
+  fillDatalist('dlOrganizations', settings.orgs);
+  fillDatalist('dlRepresentativeOrgs', settings.orgs);
+  fillDatalist('dlPositions', settings.positions);
+  fillDatalist('dlFullNames', settings.people.map(person => person.fio));
+  fillDatalist('dlObjects', settings.objects);
+  fillDatalist('dlInspectionObjects', settings.rooms);
+}
+
+/* ============================================================================
+   6. КОМИССИЯ И ПРЕДСТАВИТЕЛИ
+   ============================================================================ */
+
+function commissionRowHTML(index) {
+  return `
+    <div class="person-row" data-kind="commission" data-index="${index}">
+      <div class="cell">
+        <input class="cell-input" list="dlOrganizations" placeholder="организация" data-field="org" autocomplete="off">
+      </div>
+      <div class="spacer"></div>
+      <div class="cell">
+        <input class="cell-input" list="dlPositions" placeholder="должность" data-field="pos" autocomplete="off">
+      </div>
+      <div class="spacer"></div>
+      <div class="cell">
+        <input class="cell-input" list="dlFullNames" placeholder="ФИО" data-field="fio" autocomplete="off">
+      </div>
+    </div>
+    <div class="person-row" style="grid-template-columns: 3fr 0.2fr 2.6fr 0.2fr 3fr;">
+      <div></div>
+      <div></div>
+      <div class="caption">(должность)</div>
+      <div></div>
+      <div class="caption">(фамилия, имя, отчество)</div>
+    </div>
+  `;
+}
+
+function representativeRowHTML(index) {
+  return `
+    <div class="person-row" data-kind="representative" data-index="${index}">
+      <div class="cell">
+        <input class="cell-input rep-org" list="dlRepresentativeOrgs" placeholder="организация" data-field="org" readonly>
+      </div>
+      <div class="spacer"></div>
+      <div class="cell">
+        <div class="sign-cell" onclick="openSig(this)">
+          <span class="placeholder">место подписи</span>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="cell">
+        <input class="cell-input rep-fio" placeholder="ФИО" data-field="fio" readonly>
+      </div>
+    </div>
+    <div class="person-row" style="grid-template-columns: 3fr 0.2fr 2.6fr 0.2fr 3fr;">
+      <div></div>
+      <div></div>
+      <div class="caption">(подпись)</div>
+      <div></div>
+      <div></div>
+    </div>
+  `;
+}
+
+function renderCommission() {
+  const container = document.getElementById('commissionList');
+  if (!container) return;
+  container.innerHTML = Array.from({ length: COMMISSION_COUNT }, (_, index) => commissionRowHTML(index)).join('');
+}
+
+function renderRepresentatives() {
+  const container = document.getElementById('representativesList');
+  if (!container) return;
+  container.innerHTML = Array.from({ length: REPRESENTATIVES_COUNT }, (_, index) => representativeRowHTML(index)).join('');
+}
+
+function bindCommissionEvents() {
+  const container = document.getElementById('commissionList');
+  if (!container) return;
+  // input — при вводе и выборе из datalist, change — страховка для отдельных браузеров
+  container.addEventListener('input', onCommissionFieldInput);
+  container.addEventListener('change', onCommissionFieldInput);
+}
+
+function onCommissionFieldInput(event) {
+  const input = event.target;
+  if (!input || !input.classList || !input.classList.contains('cell-input')) return;
+  const row = input.closest('.person-row[data-kind="commission"]');
+  if (!row) return;
+
+  const index = Number(row.dataset.index);
+  const field = input.dataset.field;
+
+  if (field === 'fio') {
+    applyAutofill(row);
+    syncToRepresentative(index);
+  } else if (field === 'org') {
+    syncToRepresentative(index);
+  }
+}
+
+/*
+ * Автозаполнение: при смене ФИО на известного человека из справочника
+ * подставляем должность и организацию. Ручная правка этих полей сохраняется,
+ * пока пользователь не выберет другое ФИО.
+ */
+function applyAutofill(row) {
+  const fioInput = row.querySelector('[data-field="fio"]');
+  if (!fioInput) return;
+
+  const value = normalizeSpaces(fioInput.value);
+  if (!value) {
+    row.dataset.fioKey = '';
+    return;
+  }
+
+  const person = findPersonByFio(value);
+  if (!person) {
+    row.dataset.fioKey = '';
+    return;
+  }
+
+  const personKey = normalizeFio(person.fio);
+  if (row.dataset.fioKey === personKey) return; // для этого ФИО уже подставляли
+
+  row.dataset.fioKey = personKey;
+
+  const positionInput = row.querySelector('[data-field="pos"]');
+  const orgInput = row.querySelector('[data-field="org"]');
+  const filled = [];
+
+  if (positionInput) {
+    positionInput.value = person.position || '';
+    filled.push(positionInput);
+  }
+  if (orgInput) {
+    orgInput.value = person.org || '';
+    filled.push(orgInput);
+  }
+
+  flashAutofill(filled);
+}
+
+/* Короткая подсветка полей, заполненных автоматически. */
+function flashAutofill(inputs) {
+  inputs.forEach(input => {
+    input.classList.add('autofilled');
+    window.setTimeout(() => input.classList.remove('autofilled'), 1300);
+  });
+}
+
+/* Дублируем организацию и ФИО из комиссии в блок «Представители». */
+function syncToRepresentative(index) {
+  const commissionRow = document.querySelector(`.person-row[data-kind="commission"][data-index="${index}"]`);
+  const representativeRow = document.querySelector(`.person-row[data-kind="representative"][data-index="${index}"]`);
+  if (!commissionRow || !representativeRow) return;
+
+  const orgInput = commissionRow.querySelector('[data-field="org"]');
+  const fioInput = commissionRow.querySelector('[data-field="fio"]');
+  representativeRow.querySelector('.rep-org').value = orgInput ? orgInput.value : '';
+  representativeRow.querySelector('.rep-fio').value = fioInput ? fioInput.value : '';
+}
+
+/* ============================================================================
+   7. ТАБЛИЦА РАБОТ
+   ============================================================================ */
+
+const worksTbody = document.querySelector('#worksTable tbody');
+
+function createRowHTML(num) {
+  return `
+    <td class="num">${num}</td>
+    <td class="work-cell">
+      <div class="editable-cell" contenteditable="true" data-placeholder="" data-field="work"></div>
+    </td>
+    <td class="remark-cell">
+      <div class="editable-cell" contenteditable="true" data-placeholder="" data-field="remark"></div>
+    </td>
+    <td class="fix-cell">
+      <div class="fix-wrapper">
+        <div class="fix-date-row">
+          <input class="fix-date" id="fixDate_${num}" placeholder="дата" data-field="fixDate" autocomplete="off">
+          <button type="button" class="date-btn" onclick="openDatePicker(this, 'fixDate_${num}')" title="Выбрать дату" aria-label="Выбрать дату устранения">📅</button>
+        </div>
+        <div class="fix-sign" onclick="openSig(this)">
+          <span class="placeholder">подпись</span>
+        </div>
+      </div>
+    </td>
+  `;
+}
+
+function initWorksTable() {
+  if (!worksTbody) return;
+  for (let i = 1; i <= DEFAULT_WORKS_COUNT; i++) {
+    const row = document.createElement('tr');
+    row.innerHTML = createRowHTML(i);
+    worksTbody.appendChild(row);
+  }
+}
+
+/* После удаления строки обновляем номера, id полей дат и обработчики. */
+function renumberRows() {
+  if (!worksTbody) return;
+  const rows = worksTbody.querySelectorAll('tr');
+  rows.forEach((row, index) => {
+    const num = index + 1;
+    row.querySelector('.num').textContent = num;
+    const dateInput = row.querySelector('.fix-date');
+    const button = row.querySelector('.date-btn');
+    if (dateInput) dateInput.id = 'fixDate_' + num;
+    if (button) button.setAttribute('onclick', `openDatePicker(this, 'fixDate_${num}')`);
+  });
+}
+
+function addTableRow() {
+  if (!worksTbody) return;
+  const num = worksTbody.querySelectorAll('tr').length + 1;
+  const row = document.createElement('tr');
+  row.innerHTML = createRowHTML(num);
+  worksTbody.appendChild(row);
+}
+
+function removeTableRow() {
+  if (!worksTbody) return;
+  const rows = worksTbody.querySelectorAll('tr');
+  if (rows.length > 1) {
+    rows[rows.length - 1].remove();
+    renumberRows();
+  } else {
+    alert('Нельзя удалить последнюю строку таблицы.');
+  }
+}
+
+/* ============================================================================
+   8. ДАТЫ И КАЛЕНДАРЬ
+   ============================================================================ */
+
+const DATE_GROUPS = {
+  actDate: ['dateDay', 'dateMonth', 'dateYear'],
+  workStart: ['workStartDay', 'workStartMonth', 'workStartYear'],
+  workEnd: ['workEndDay', 'workEndMonth', 'workEndYear']
+};
+
+let calTargetId = null;      // куда записать выбранную дату
+let calViewYear = 0;
+let calViewMonth = 0;
+let calSelectedDate = null;  // текущее значение выбранного поля
+
+/* Прочитать дату из полей выбранной цели (или null). */
+function readTargetDate(targetId) {
+  if (!targetId) return null;
+
+  if (DATE_GROUPS[targetId]) {
+    const ids = DATE_GROUPS[targetId];
+    const dayInput = document.getElementById(ids[0]);
+    const monthInput = document.getElementById(ids[1]);
+    const yearInput = document.getElementById(ids[2]);
+    if (!dayInput || !monthInput || !yearInput) return null;
+
+    const day = parseInt(dayInput.value, 10);
+    const month = monthIndexByName(monthInput.value);
+    const year = parseInt(yearInput.value, 10);
+    if (!Number.isFinite(day) || month < 0 || !Number.isFinite(year)) return null;
+    const date = new Date(year, month, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return null;
+    return date;
+  }
+
+  if (targetId.indexOf('fixDate_') === 0) {
+    const input = document.getElementById(targetId);
+    return input ? parseRuDate(input.value) : null;
+  }
+
+  return null;
+}
+
+/* Записать дату в поля выбранной цели. */
+function setTargetDate(targetId, date) {
+  if (!targetId || !date) return;
+
+  if (DATE_GROUPS[targetId]) {
+    const ids = DATE_GROUPS[targetId];
+    const dayInput = document.getElementById(ids[0]);
+    const monthInput = document.getElementById(ids[1]);
+    const yearInput = document.getElementById(ids[2]);
+    if (!dayInput || !monthInput || !yearInput) return;
+
+    dayInput.value = date.getDate();
+    monthInput.value = MONTHS_GENITIVE[date.getMonth()];
+    yearInput.value = date.getFullYear();
+    return;
+  }
+
+  if (targetId.indexOf('fixDate_') === 0) {
+    const input = document.getElementById(targetId);
+    if (input) input.value = formatRuDate(date);
+  }
+}
+
+function clearTargetDate(targetId) {
+  if (!targetId) return;
+
+  if (DATE_GROUPS[targetId]) {
+    const ids = DATE_GROUPS[targetId];
+    const dayInput = document.getElementById(ids[0]);
+    const monthInput = document.getElementById(ids[1]);
+    const yearInput = document.getElementById(ids[2]);
+    if (!dayInput || !monthInput || !yearInput) return;
+
+    dayInput.value = '';
+    monthInput.value = '';
+    yearInput.value = '';
+    return;
+  }
+
+  if (targetId.indexOf('fixDate_') === 0) {
+    const input = document.getElementById(targetId);
+    if (input) input.value = '';
+  }
+}
+
+/*
+ * Открыть календарь. btnElement оставлен в сигнатуре для совместимости
+ * с разметкой (кнопки 📅); сам календарь — модальное окно по центру экрана.
+ */
+function openDatePicker(btnElement, targetId) {
+  // На всякий случай проверяем цель: неизвестный id не должен открывать пустой календарь.
+  if (!DATE_GROUPS[targetId] && targetId.indexOf('fixDate_') !== 0) {
+    console.warn('Неизвестная цель для календаря:', targetId);
+    return;
+  }
+
+  const current = readTargetDate(targetId);
+  const base = current || new Date();
+
+  calTargetId = targetId;
+  calViewYear = base.getFullYear();
+  calViewMonth = base.getMonth();
+  calSelectedDate = current;
+
+  renderCalendar();
+  openModal('dateModal');
+}
+
+function closeDatePicker() {
+  closeModal('dateModal');
+  calTargetId = null;
+  calSelectedDate = null;
+}
+
+function renderCalendar() {
+  const title = document.getElementById('calTitle');
+  const grid = document.getElementById('calGrid');
+  if (!title || !grid) return;
+
+  title.textContent = MONTHS_NOMINATIVE[calViewMonth] + ' ' + calViewYear;
+
+  grid.innerHTML = '';
+
+  const firstDay = new Date(calViewYear, calViewMonth, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7; // Пн — первый день недели
+  const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+
+  const todayKey = formatIsoDate(new Date());
+  const selectedKey = calSelectedDate ? formatIsoDate(calSelectedDate) : '';
+
+  // Всегда 42 ячейки — высота календаря не «прыгает» между месяцами.
+  for (let cellIndex = 0; cellIndex < 42; cellIndex++) {
+    const dayNumber = cellIndex - startOffset + 1;
+
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      const emptyCell = document.createElement('div');
+      emptyCell.className = 'cal-day other';
+      grid.appendChild(emptyCell);
+      continue;
+    }
+
+    const date = new Date(calViewYear, calViewMonth, dayNumber);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'cal-day';
+    button.textContent = String(dayNumber);
+    button.dataset.date = formatIsoDate(date);
+    button.setAttribute('aria-label', dayNumber + ' ' + MONTHS_GENITIVE[calViewMonth] + ' ' + calViewYear);
+
+    if (button.dataset.date === todayKey) button.classList.add('today');
+    if (button.dataset.date === selectedKey) button.classList.add('selected');
+    if (date.getDay() === 0 || date.getDay() === 6) button.classList.add('weekend');
+
+    grid.appendChild(button);
+  }
+}
+
+function calShiftMonth(delta) {
+  const date = new Date(calViewYear, calViewMonth + delta, 1);
+  calViewYear = date.getFullYear();
+  calViewMonth = date.getMonth();
+  renderCalendar();
+}
+
+function calShiftYear(delta) {
+  const date = new Date(calViewYear + delta, calViewMonth, 1);
+  calViewYear = date.getFullYear();
+  calViewMonth = date.getMonth();
+  renderCalendar();
+}
+
+function calGoToday() {
+  if (!calTargetId) return;
+  setTargetDate(calTargetId, new Date());
+  closeDatePicker();
+}
+
+function calClearDate() {
+  if (!calTargetId) return;
+  clearTargetDate(calTargetId);
+  closeDatePicker();
+}
+
+function initCalendarEvents() {
+  const grid = document.getElementById('calGrid');
+  if (!grid) return;
+
+  grid.addEventListener('click', event => {
+    const button = event.target.closest('.cal-day[data-date]');
+    if (!button || !calTargetId) return;
+
+    const date = parseIsoDate(button.dataset.date);
+    if (!date) return;
+
+    setTargetDate(calTargetId, date);
+    closeDatePicker();
+  });
+}
+
+/* ============================================================================
+   9. МОДАЛЬНЫЕ ОКНА
+   ============================================================================ */
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.classList.add('open');
+  document.body.classList.add('modal-open');
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.remove('open');
+  if (!document.querySelector('.modal.open')) {
+    document.body.classList.remove('modal-open');
+  }
+}
+
+/* Закрытие по клику на затемнение и по Esc. */
+function initModalDismiss() {
+  ['sigModal', 'dateModal', 'settingsModal'].forEach(id => {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+
+    modal.addEventListener('click', event => {
+      if (event.target !== modal) return; // клик именно по фону, а не по окну
+      if (id === 'sigModal') closeSig();
+      else if (id === 'dateModal') closeDatePicker();
+      else closeSettings();
+    });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+
+    if (document.getElementById('settingsModal').classList.contains('open')) {
+      closeSettings();
+      return;
+    }
+    if (document.getElementById('dateModal').classList.contains('open')) {
+      closeDatePicker();
+      return;
+    }
+    if (document.getElementById('sigModal').classList.contains('open')) {
+      closeSig();
+    }
+  });
+}
+
+/* ============================================================================
+   10. ПОДПИСЬ (Canvas)
+   ============================================================================ */
+
+let sigCanvas = null;
+let sigCtx = null;
+let drawing = false;
+let currentTarget = null;
+let hasDrawn = false;
+
+function openSig(cell) {
+  currentTarget = cell;
+
+  const deleteButton = document.getElementById('btnDeleteSig');
+  if (deleteButton) {
+    deleteButton.style.display = cell.classList.contains('signed') ? 'inline-block' : 'none';
+  }
+
+  openModal('sigModal');
+  initCanvas();
+}
+
+function initCanvas() {
+  const canvas = document.getElementById('sigCanvas');
+  if (!canvas) return;
+
+  // Чистая копия canvas — гарантированно убираем прежние слушатели событий.
+  const fresh = canvas.cloneNode(false);
+  canvas.parentNode.replaceChild(fresh, canvas);
+
+  sigCanvas = fresh;
+  sigCtx = fresh.getContext('2d');
+  hasDrawn = false;
+
+  const rect = fresh.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  fresh.width = Math.round(rect.width * dpr);
+  fresh.height = Math.round(rect.height * dpr);
+  sigCtx.scale(dpr, dpr);
+
+  sigCtx.strokeStyle = '#1a237e';
+  sigCtx.lineWidth = 2.5;
+  sigCtx.lineCap = 'round';
+  sigCtx.lineJoin = 'round';
+
+  fresh.addEventListener('pointerdown', onPointerDown);
+  fresh.addEventListener('pointermove', onPointerMove);
+  fresh.addEventListener('pointerup', onPointerUp);
+  fresh.addEventListener('pointercancel', onPointerUp);
+  fresh.addEventListener('pointerleave', onPointerUp);
+}
+
+function getPos(event) {
+  const rect = sigCanvas.getBoundingClientRect();
+  return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+}
+
+function onPointerDown(event) {
+  if (!sigCtx) return;
+  drawing = true;
+  hasDrawn = true;
+  const point = getPos(event);
+  sigCtx.beginPath();
+  sigCtx.moveTo(point.x, point.y);
+  event.preventDefault();
+}
+
+function onPointerMove(event) {
+  if (!drawing || !sigCtx) return;
+  const point = getPos(event);
+  sigCtx.lineTo(point.x, point.y);
+  sigCtx.stroke();
+  event.preventDefault();
+}
+
+function onPointerUp(event) {
+  drawing = false;
+  if (event) event.preventDefault();
+}
+
+function clearSig() {
+  if (!sigCanvas || !sigCtx) return;
+  const rect = sigCanvas.getBoundingClientRect();
+  sigCtx.clearRect(0, 0, rect.width, rect.height);
+  hasDrawn = false;
+}
+
+function deleteSig() {
+  if (currentTarget) {
+    currentTarget.classList.remove('signed');
+    const image = currentTarget.querySelector('img');
+    if (image) image.remove();
+    const placeholder = currentTarget.querySelector('.placeholder');
+    if (placeholder) placeholder.style.display = '';
+  }
+  closeSig();
+}
+
+function confirmSig() {
+  if (!currentTarget || !sigCanvas) {
+    closeSig();
+    return;
+  }
+  if (!hasDrawn) {
+    closeSig();
+    return;
+  }
+
+  const dataUrl = sigCanvas.toDataURL('image/png');
+  currentTarget.classList.add('signed');
+
+  let image = currentTarget.querySelector('img');
+  if (!image) {
+    image = document.createElement('img');
+    currentTarget.appendChild(image);
+  }
+  image.src = dataUrl;
+
+  closeSig();
+}
+
+function closeSig() {
+  closeModal('sigModal');
+  currentTarget = null;
+}
+
+/* ============================================================================
+   11. НАСТРОЙКИ СПИСКОВ (модальное окно)
+   ============================================================================ */
+
+const CHIP_LISTS = [
+  { key: 'orgs', containerId: 'chipsOrgs', inputId: 'newOrg' },
+  { key: 'positions', containerId: 'chipsPositions', inputId: 'newPosition' },
+  { key: 'objects', containerId: 'chipsObjects', inputId: 'newObject' },
+  { key: 'rooms', containerId: 'chipsRooms', inputId: 'newRoom' }
+];
+
+function openSettings() {
+  if (!settings) settings = loadSettings();
+  draftSettings = deepClone(settings);
+  renderPeopleDraft();
+  renderChips();
+  renderStorageNote();
+  openModal('settingsModal');
+}
+
+function closeSettings() {
+  draftSettings = null;
+  closeModal('settingsModal');
+}
+
+function renderStorageNote() {
+  const note = document.getElementById('storageNote');
+  if (!note) return;
+
+  if (storageOk) {
+    note.textContent = 'Настройки сохраняются в этом браузере (localStorage).';
+    note.classList.remove('warn');
+  } else {
+    note.textContent = '⚠ Браузер блокирует локальное хранилище: настройки будут действовать до закрытия страницы. Сохраните их через «Экспорт JSON».';
+    note.classList.add('warn');
+  }
+}
+
+function renderPeopleDraft() {
+  const box = document.getElementById('settingsPeople');
+  if (!box || !draftSettings) return;
+
+  box.innerHTML = '';
+
+  if (!draftSettings.people.length) {
+    const empty = document.createElement('div');
+    empty.className = 'chip-empty';
+    empty.textContent = 'Справочник пуст — добавьте человека или нажмите «Взять людей из акта».';
+    box.appendChild(empty);
+    return;
+  }
+
+  draftSettings.people.forEach((person, index) => {
+    const row = document.createElement('div');
+    row.className = 'people-row';
+    row.dataset.index = String(index);
+    row.innerHTML = `
+      <input type="text" data-k="fio" list="dlFullNames" placeholder="ФИО" autocomplete="off" value="${escapeHtml(person.fio)}">
+      <input type="text" data-k="position" list="dlPositions" placeholder="Должность" autocomplete="off" value="${escapeHtml(person.position)}">
+      <input type="text" data-k="org" list="dlOrganizations" placeholder="Организация" autocomplete="off" value="${escapeHtml(person.org)}">
+      <button type="button" class="del-person" data-del="${index}" title="Удалить запись" aria-label="Удалить запись">🗑</button>
+    `;
+    box.appendChild(row);
+  });
+}
+
+function renderChips() {
+  if (!draftSettings) return;
+
+  CHIP_LISTS.forEach(config => {
+    const box = document.getElementById(config.containerId);
+    if (!box) return;
+
+    box.innerHTML = '';
+    const list = draftSettings[config.key];
+
+    if (!Array.isArray(list) || !list.length) {
+      const empty = document.createElement('span');
+      empty.className = 'chip-empty';
+      empty.textContent = 'Список пуст';
+      box.appendChild(empty);
+      return;
+    }
+
+    list.forEach((value, index) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+
+      const text = document.createElement('span');
+      text.textContent = value;
+      text.title = value;
+
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.textContent = '×';
+      removeButton.title = 'Удалить значение';
+      removeButton.dataset.list = config.key;
+      removeButton.dataset.index = String(index);
+
+      chip.appendChild(text);
+      chip.appendChild(removeButton);
+      box.appendChild(chip);
+    });
+  });
+}
+
+function addPersonDraft() {
+  if (!draftSettings) return;
+  draftSettings.people.push({ fio: '', position: '', org: '' });
+  renderPeopleDraft();
+
+  const lastRow = document.querySelector('#settingsPeople .people-row:last-child');
+  if (lastRow) {
+    const input = lastRow.querySelector('input[data-k="fio"]');
+    if (input) input.focus();
+  }
+}
+
+function addChipFromInput(listKey, inputId) {
+  if (!draftSettings) return;
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  const value = normalizeSpaces(input.value);
+  if (!value) {
+    input.focus();
+    return;
+  }
+
+  const list = draftSettings[listKey];
+  if (!Array.isArray(list)) return;
+
+  const key = normalizeKey(value);
+  if (list.some(item => normalizeKey(item) === key)) {
+    showToast('Такое значение уже есть в списке');
+  } else {
+    list.push(value);
+    renderChips();
+    showToast('Значение добавлено');
+  }
+
+  input.value = '';
+  input.focus();
+}
+
+function removeChip(listKey, index) {
+  if (!draftSettings) return;
+  const list = draftSettings[listKey];
+  if (!Array.isArray(list) || index < 0 || index >= list.length) return;
+  list.splice(index, 1);
+  renderChips();
+}
+
+/* Собрать людей из заполненных строк комиссии в черновик справочника. */
+function takePeopleFromAct() {
+  if (!draftSettings) return;
+
+  let added = 0;
+  let updated = 0;
+
+  document.querySelectorAll('.person-row[data-kind="commission"]').forEach(row => {
+    const fioInput = row.querySelector('[data-field="fio"]');
+    const posInput = row.querySelector('[data-field="pos"]');
+    const orgInput = row.querySelector('[data-field="org"]');
+    if (!fioInput) return;
+
+    const fio = normalizeSpaces(fioInput.value);
+    if (!fio) return;
+
+    const position = posInput ? normalizeSpaces(posInput.value) : '';
+    const org = orgInput ? normalizeSpaces(orgInput.value) : '';
+    const key = normalizeFio(fio);
+
+    const existing = draftSettings.people.find(person => normalizeFio(person.fio) === key);
+    if (existing) {
+      if (position) existing.position = position;
+      if (org) existing.org = org;
+      updated++;
+    } else {
+      draftSettings.people.push({ fio: fio, position: position, org: org });
+      added++;
+    }
+  });
+
+  renderPeopleDraft();
+
+  if (!added && !updated) {
+    showToast('В акте пока не заполнено ни одного ФИО');
+  } else {
+    showToast('Добавлено: ' + added + ', обновлено: ' + updated + '. Не забудьте нажать «Сохранить».');
+  }
+}
+
+function resetSettingsDraft() {
+  if (!confirm('Вернуть заводские списки и автозаполнение? Текущие настройки будут заменены.')) return;
+  draftSettings = deepClone(DEFAULT_SETTINGS);
+  renderPeopleDraft();
+  renderChips();
+  showToast('Восстановлены заводские настройки. Нажмите «Сохранить».');
+}
+
+/* Собрать валидные настройки из черновика. */
+function buildSettingsFromDraft(draft) {
+  const people = [];
+  const seen = new Set();
+  const sourcePeople = Array.isArray(draft.people) ? draft.people : [];
+
+  sourcePeople.forEach(person => {
+    const fio = normalizeSpaces(person.fio);
+    if (!fio) return;
+
+    const key = normalizeFio(fio);
+    if (seen.has(key)) {
+      // Повтор ФИО — дополняем пустые поля уже существующей записи.
+      const existing = people.find(item => normalizeFio(item.fio) === key);
+      if (existing) {
+        if (!existing.position) existing.position = normalizeSpaces(person.position);
+        if (!existing.org) existing.org = normalizeSpaces(person.org);
+      }
+      return;
+    }
+
+    seen.add(key);
+    people.push({
+      fio: fio,
+      position: normalizeSpaces(person.position),
+      org: normalizeSpaces(person.org)
+    });
+  });
+
+  const orgs = uniqueStrings(draft.orgs || []);
+  const positions = uniqueStrings(draft.positions || []);
+  const objects = uniqueStrings(draft.objects || []);
+  const rooms = uniqueStrings(draft.rooms || []);
+
+  // Организации и должности из справочника людей должны быть в выпадающих списках.
+  people.forEach(person => {
+    if (person.org && !orgs.some(value => normalizeKey(value) === normalizeKey(person.org))) {
+      orgs.push(person.org);
+    }
+    if (person.position && !positions.some(value => normalizeKey(value) === normalizeKey(person.position))) {
+      positions.push(person.position);
+    }
+  });
+
+  return {
+    version: SETTINGS_VERSION,
+    people: people,
+    orgs: orgs,
+    positions: positions,
+    objects: objects,
+    rooms: rooms
+  };
+}
+
+function saveSettingsFromModal() {
+  if (!draftSettings) return;
+
+  try {
+    const nextSettings = buildSettingsFromDraft(draftSettings);
+    settings = nextSettings;
+    refreshDatalists();
+
+    const saved = saveSettingsToStorage(nextSettings);
+    closeSettings();
+
+    if (saved) {
+      showToast('Настройки сохранены');
+    } else {
+      showToast('Настройки применены, но сохранить их в браузере не удалось. Скачайте резервную копию («Экспорт JSON»).', 'error');
+    }
+  } catch (error) {
+    console.error('Ошибка сохранения настроек:', error);
+    showToast('Не удалось применить настройки: ' + error.message, 'error');
+  }
+}
+
+/* ---------- Экспорт / импорт ---------- */
+
+function exportSettings() {
+  try {
+    const data = draftSettings ? buildSettingsFromDraft(draftSettings) : settings;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+    const now = new Date();
+    const fileName = 'Акт-осм-настройки_' + formatRuDate(now) + '.json';
+
+    if (downloadBlob(blob, fileName)) {
+      showToast('Файл настроек сформирован');
+    }
+  } catch (error) {
+    console.error('Ошибка экспорта настроек:', error);
+    showToast('Не удалось экспортировать настройки: ' + error.message, 'error');
+  }
+}
+
+function pickSettingsFile() {
+  const input = document.getElementById('settingsFileInput');
+  if (input) input.click();
+}
+
+function normalizeImportedSettings(data) {
+  if (!data || typeof data !== 'object') return null;
+
+  const people = sanitizePeople(data.people);
+  const orgs = sanitizeStringList(data.orgs);
+  const positions = sanitizeStringList(data.positions);
+  const objects = sanitizeStringList(data.objects);
+  const rooms = sanitizeStringList(data.rooms);
+
+  if (!people && !orgs && !positions && !objects && !rooms) return null;
+
+  const defaults = deepClone(DEFAULT_SETTINGS);
+  return {
+    version: SETTINGS_VERSION,
+    people: people || defaults.people,
+    orgs: orgs || defaults.orgs,
+    positions: positions || defaults.positions,
+    objects: objects || defaults.objects,
+    rooms: rooms || defaults.rooms
+  };
+}
+
+function importSettingsFromFile(file) {
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result));
+      const imported = normalizeImportedSettings(data);
+      if (!imported) throw new Error('файл не содержит настроек акта');
+
+      draftSettings = imported;
+      renderPeopleDraft();
+      renderChips();
+      showToast('Настройки загружены в окно. Проверьте их и нажмите «Сохранить».');
+    } catch (error) {
+      console.error('Ошибка импорта настроек:', error);
+      showToast('Не удалось прочитать файл настроек: ' + error.message, 'error');
+    }
+  };
+  reader.onerror = () => showToast('Не удалось открыть файл', 'error');
+  reader.readAsText(file);
+}
+
+function initSettingsEvents() {
+  const peopleBox = document.getElementById('settingsPeople');
+  if (peopleBox) {
+    // Вводимый текст сразу сохраняем в черновик, чтобы он не терялся при
+    // добавлении/удалении строк или кнопке «Взять людей из акта».
+    peopleBox.addEventListener('input', event => {
+      const input = event.target;
+      if (!input || input.tagName !== 'INPUT') return;
+
+      const row = input.closest('.people-row');
+      if (!row || !draftSettings) return;
+
+      const person = draftSettings.people[Number(row.dataset.index)];
+      if (!person) return;
+
+      const key = input.dataset.k;
+      if (key === 'fio' || key === 'position' || key === 'org') {
+        person[key] = input.value;
+      }
+    });
+
+    peopleBox.addEventListener('click', event => {
+      const button = event.target.closest('button[data-del]');
+      if (!button || !draftSettings) return;
+
+      const index = Number(button.dataset.del);
+      if (index < 0 || index >= draftSettings.people.length) return;
+
+      draftSettings.people.splice(index, 1);
+      renderPeopleDraft();
+    });
+  }
+
+  const settingsModal = document.getElementById('settingsModal');
+  if (settingsModal) {
+    settingsModal.addEventListener('click', event => {
+      const button = event.target.closest('.chip button[data-list]');
+      if (!button) return;
+      removeChip(button.dataset.list, Number(button.dataset.index));
+    });
+  }
+
+  CHIP_LISTS.forEach(config => {
+    const input = document.getElementById(config.inputId);
+    if (!input) return;
+
+    input.addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      addChipFromInput(config.key, config.inputId);
+    });
+  });
+
+  const fileInput = document.getElementById('settingsFileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', event => {
+      const file = event.target.files && event.target.files[0];
+      importSettingsFromFile(file);
+      event.target.value = '';
+    });
+  }
+}
+
+/* ============================================================================
+   12. ПЕЧАТЬ И СОХРАНЕНИЕ HTML
+   ============================================================================ */
+
+function sanitizeFileName(value) {
+  return String(value || '')
+    .replace(/[\\/:*?"<>|\r\n\t]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+}
+
+function downloadBlob(blob, fileName) {
+  try {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+    return true;
+  } catch (error) {
+    console.error('Ошибка скачивания файла:', error);
+    showToast('Браузер не позволил скачать файл', 'error');
+    return false;
+  }
+}
+
+/* ---------- Печать ---------- */
+
+let printTitleBefore = null;
+
+function printPdf() {
+  const actNumber = document.getElementById('actNumber').value.trim();
+  const objectName = document.getElementById('objectName').value.trim();
+
+  if (!actNumber || !objectName) {
+    alert('Заполните «Акт №» и «Объект» перед сохранением в PDF!');
+    return;
+  }
+
+  if (typeof window.print !== 'function') {
+    alert('Этот браузер не поддерживает печать. Откройте файл в Chrome и повторите.');
+    return;
+  }
+
+  const now = new Date();
+  const fileName = 'Акт №' + sanitizeFileName(actNumber) +
+    '_' + formatRuDate(now) +
+    '_' + pad2(now.getHours()) + '-' + pad2(now.getMinutes());
+
+  printTitleBefore = document.title;
+  document.title = fileName;
+
+  try {
+    window.print();
+  } catch (error) {
+    console.error('Ошибка печати:', error);
+    document.title = printTitleBefore;
+    printTitleBefore = null;
+    alert('Не удалось открыть окно печати.');
+  }
+}
+
+/* Заменяем однострочные поля «Объект» на многострочные при печати. */
+let printFieldReplacements = [];
+
+function cleanupPrintFields() {
+  printFieldReplacements.forEach(item => {
+    if (item.value && item.value.parentNode) item.value.remove();
+    if (item.input) item.input.style.display = '';
+  });
+  printFieldReplacements = [];
+}
+
+function initPrintEvents() {
+  window.addEventListener('beforeprint', () => {
+    cleanupPrintFields();
+
+    ['objectName', 'roomName'].forEach(id => {
+      const input = document.getElementById(id);
+      if (!input) return;
+
+      const value = document.createElement('div');
+      value.className = 'print-value';
+      value.textContent = input.value;
+      input.parentNode.insertBefore(value, input.nextSibling);
+      input.style.display = 'none';
+      printFieldReplacements.push({ input: input, value: value });
+    });
+  });
+
+  window.addEventListener('afterprint', () => {
+    cleanupPrintFields();
+
+    if (printTitleBefore !== null) {
+      document.title = printTitleBefore;
+      printTitleBefore = null;
+    }
+  });
+}
+
+/* ---------- Сохранение статичной HTML-копии ---------- */
+
+/*
+ * Собираем копию документа без скриптов и интерактивных элементов:
+ * значения полей превращаются в обычный текст, подписи остаются картинками.
+ */
+function buildStaticHtml() {
+  const sourcePage = document.getElementById('actPage');
+  if (!sourcePage) throw new Error('Не найден контейнер акта');
+
+  const clone = document.documentElement.cloneNode(true);
+  const clonePage = clone.querySelector('#actPage');
+  if (!clonePage) throw new Error('Не удалось скопировать акт');
+
+  // 1. Поля ввода → статичный текст.
+  const sourceInputs = Array.from(sourcePage.querySelectorAll('input'));
+  const cloneInputs = Array.from(clonePage.querySelectorAll('input'));
+
+  if (sourceInputs.length !== cloneInputs.length) {
+    console.warn('Структура полей акта изменилась: ' + sourceInputs.length + ' / ' + cloneInputs.length);
+  }
+
+  cloneInputs.forEach((cloneInput, index) => {
+    const sourceInput = sourceInputs[index];
+    if (!sourceInput) {
+      cloneInput.remove();
+      return;
+    }
+
+    const replacement = document.createElement('span');
+    replacement.textContent = sourceInput.value;
+    replacement.className = sourceInput.classList.contains('value')
+      ? 'print-value'
+      : sourceInput.className;
+
+    const inlineStyle = sourceInput.getAttribute('style');
+    if (inlineStyle) replacement.setAttribute('style', inlineStyle);
+
+    cloneInput.replaceWith(replacement);
+  });
+
+  // 2. Редактируемые ячейки → обычные div с сохранённым содержимым.
+  const sourceCells = Array.from(sourcePage.querySelectorAll('.editable-cell'));
+  const cloneCells = Array.from(clonePage.querySelectorAll('.editable-cell'));
+
+  cloneCells.forEach((cell, index) => {
+    if (sourceCells[index]) cell.innerHTML = sourceCells[index].innerHTML;
+    cell.removeAttribute('contenteditable');
+    cell.removeAttribute('spellcheck');
+    cell.removeAttribute('data-placeholder');
+  });
+
+  // 3. Убираем служебные элементы подписей и кнопки календаря.
+  clonePage.querySelectorAll('.sign-cell .placeholder, .fix-sign .placeholder').forEach(element => element.remove());
+  clonePage.querySelectorAll('.fix-sign:not(.signed)').forEach(element => element.remove());
+  clonePage.querySelectorAll('.date-btn').forEach(element => element.remove());
+
+  // 4. Убираем всё интерактивное и служебное.
+  clone.querySelectorAll(
+    '.toolbar, .table-controls, .modal, datalist, script, .toast, #settingsFileInput'
+  ).forEach(element => element.remove());
+
+  // 5. Убираем inline-обработчики событий.
+  clone.querySelectorAll('*').forEach(element => {
+    Array.from(element.attributes).forEach(attribute => {
+      if (attribute.name.toLowerCase().indexOf('on') === 0) {
+        element.removeAttribute(attribute.name);
+      }
+    });
+  });
+
+  const cloneBody = clone.querySelector('body');
+  if (cloneBody) cloneBody.classList.remove('modal-open');
+
+  const actNumberInput = document.getElementById('actNumber');
+  const actNumber = actNumberInput ? actNumberInput.value.trim() : '';
+  const title = clone.querySelector('title');
+  if (title) title.textContent = 'Акт визуального осмотра' + (actNumber ? ' № ' + actNumber : '');
+
+  return '<!DOCTYPE html>\n' + clone.outerHTML;
+}
+
+function saveHtml() {
+  try {
+    const html = buildStaticHtml();
+    const actNumber = document.getElementById('actNumber').value.trim();
+    const now = new Date();
+
+    const baseName = actNumber ? 'Акт №' + sanitizeFileName(actNumber) : 'Акт';
+    const fileName = baseName + '_' + formatRuDate(now) +
+      '_' + pad2(now.getHours()) + '-' + pad2(now.getMinutes()) + '.html';
+
+    if (downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), fileName)) {
+      showToast('HTML-копия сохранена');
+    }
+  } catch (error) {
+    console.error('Ошибка сохранения HTML:', error);
+    showToast('Не удалось сохранить HTML: ' + error.message, 'error');
+  }
+}
+
+/* ============================================================================
+   13. ОЧИСТКА
+   ============================================================================ */
+
+function clearAll() {
+  if (!confirm('Очистить все поля акта и подписи? Настройки списков сохранятся.')) return;
+
+  // Очищаем только сам акт, не трогая поля окна настроек.
+  document.querySelectorAll('#actPage input:not([readonly]), #actPage textarea').forEach(input => {
+    input.value = '';
+  });
+
+  document.querySelectorAll('#actPage .editable-cell').forEach(cell => {
+    cell.innerHTML = '';
+  });
+
+  document.querySelectorAll('#actPage .sign-cell, #actPage .fix-sign').forEach(cell => {
+    cell.classList.remove('signed');
+    const image = cell.querySelector('img');
+    if (image) image.remove();
+    const placeholder = cell.querySelector('.placeholder');
+    if (placeholder) placeholder.style.display = '';
+  });
+
+  document.querySelectorAll('#actPage .person-row[data-kind="commission"]').forEach(row => {
+    row.dataset.fioKey = '';
+  });
+
+  for (let index = 0; index < COMMISSION_COUNT; index++) {
+    syncToRepresentative(index);
+  }
+
+  setActDateToday();
+  showToast('Поля акта очищены');
+}
+
+/* ============================================================================
+   14. ИНИЦИАЛИЗАЦИЯ
+   ============================================================================ */
+
+function setActDateToday() {
+  const now = new Date();
+  document.getElementById('dateDay').value = now.getDate();
+  document.getElementById('dateMonth').value = MONTHS_GENITIVE[now.getMonth()];
+  document.getElementById('dateYear').value = now.getFullYear();
+}
+
+function init() {
+  storageOk = checkStorage();
+  settings = loadSettings();
+
+  renderCommission();
+  renderRepresentatives();
+  refreshDatalists();
+  initWorksTable();
+  setActDateToday();
+
+  bindCommissionEvents();
+  initCalendarEvents();
+  initModalDismiss();
+  initSettingsEvents();
+  initPrintEvents();
+
+  if (!storageOk) {
+    showToast('Браузер блокирует сохранение настроек — используйте «Экспорт JSON».', 'error');
+  }
+}
+
+try {
+  init();
+} catch (error) {
+  console.error('Ошибка запуска приложения:', error);
+  try {
+    showToast('Ошибка запуска приложения. Подробности в консоли.', 'error');
+  } catch (ignored) {
+    alert('Ошибка запуска приложения. Откройте консоль браузера.');
+  }
+}
+</script>
+
+<!-- =====================================================================
+     АВТОЗАПОЛНЕНИЕ АКТА ДАННЫМИ ОСМОТРА
+     Приложение кладёт данные в localStorage перед переходом на эту страницу.
+     ===================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  var PREFILL_KEY = 'elektroosmotr_act_prefill_v1';
+
+  /* Дата осмотра (ГГГГ-ММ-ДД) → поля «день / месяц / год» */
+  function applyDate(value) {
+    var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+    if (!match) return;
+    var year = Number(match[1]);
+    var month = Number(match[2]) - 1;
+    var day = Number(match[3]);
+    if (!MONTHS_GENITIVE[month]) return;
+    var dayInput = document.getElementById('dateDay');
+    var monthInput = document.getElementById('dateMonth');
+    var yearInput = document.getElementById('dateYear');
+    if (dayInput) dayInput.value = day;
+    if (monthInput) monthInput.value = MONTHS_GENITIVE[month];
+    if (yearInput) yearInput.value = year;
+  }
+
+  /* Виды работ — по строке на каждый, замечания — каждое с новой строки */
+  function fillWorks(works) {
+    var tbody = document.querySelector('#worksTable tbody');
+    if (!tbody || !works || !works.length) return;
+
+    while (tbody.querySelectorAll('tr').length < works.length) {
+      addTableRow();
+    }
+    var rows = tbody.querySelectorAll('tr');
+
+    works.forEach(function (item, index) {
+      var row = rows[index];
+      if (!row || !item) return;
+      var workCell = row.querySelector('[data-field="work"]');
+      var remarkCell = row.querySelector('[data-field="remark"]');
+      if (workCell) workCell.textContent = item.type || '';
+      if (remarkCell) {
+        remarkCell.textContent = (Array.isArray(item.remarks) ? item.remarks : []).join('\n');
+      }
+    });
+  }
+
+  function applyPrefill() {
+    var raw = null;
+    try {
+      raw = window.localStorage.getItem(PREFILL_KEY);
+    } catch (err) {
+      console.warn('Акт: localStorage недоступен', err);
+      return;
+    }
+    if (!raw) return;
+
+    var data = null;
+    try {
+      data = JSON.parse(raw);
+    } catch (err) {
+      console.warn('Акт: данные осмотра повреждены', err);
+      return;
+    }
+    if (!data || typeof data !== 'object') return;
+
+    var objectInput = document.getElementById('objectName');
+    var roomInput = document.getElementById('roomName');
+    if (objectInput && data.object) objectInput.value = data.object;
+    if (roomInput && data.rooms) roomInput.value = data.rooms;
+
+    applyDate(data.date);
+    fillWorks(Array.isArray(data.works) ? data.works : []);
+
+    /* Данные одноразовые: повторное открытие акта не затирает правки */
+    try {
+      window.localStorage.removeItem(PREFILL_KEY);
+    } catch (err) { /* игнорируем */ }
+
+    if (typeof showToast === 'function') {
+      showToast('Данные осмотра перенесены в акт');
+    }
+  }
+
+  window.returnToApp = function () {
+    window.location.href = 'index.html';
+  };
+
+  try {
+    applyPrefill();
+  } catch (err) {
+    console.error('Акт: ошибка автозаполнения', err);
+  }
+})();
+</script>
+</body>
+</html>

@@ -637,12 +637,117 @@
         .type-btn.is-other { color: #fcd34d; border-color: rgba(251, 191, 36, .32); }
 
         /* Свои виды работ стоят в том же списке, справа — удаление */
-        .type-item { display: block; }
+        .type-item { display: flex; gap: 8px; align-items: stretch; }
+        .type-item .type-btn { flex: 1; min-width: 0; }
         .type-row { display: flex; gap: 8px; align-items: stretch; }
         .type-row .type-btn { flex: 1; min-width: 0; }
         .type-row .type-forget { width: 46px; height: auto; flex: 0 0 auto; }
         .type-btn.is-custom { border-color: rgba(34, 211, 238, .26); }
         .type-btn.is-custom .num { color: var(--accent); }
+
+        /* Галочка «Осмотрено» слева от кнопки вида работ */
+        .type-check {
+            display: grid;
+            place-items: center;
+            width: 46px;
+            flex: 0 0 auto;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, .02);
+            cursor: pointer;
+        }
+        .type-check input {
+            width: 20px;
+            height: 20px;
+            margin: 0;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .type-check:has(input:checked) {
+            border-color: rgba(34, 211, 238, .55);
+            background: rgba(34, 211, 238, .1);
+        }
+        .inspect-progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 12px;
+            font-size: 13px;
+            color: var(--text-2);
+        }
+        .inspect-progress b { color: var(--accent); font-family: var(--mono); }
+
+        /* Настройки справочников */
+        .sheet-tall { max-height: 94dvh; }
+        .sheet-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .sheet-head .sheet-title { margin: 0; }
+        .settings-section {
+            margin: 18px 0 0;
+            padding-top: 16px;
+            border-top: 1px solid var(--line);
+        }
+        .settings-section .card-head { margin-bottom: 10px; }
+        .settings-object {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, .02);
+            overflow: hidden;
+        }
+        .settings-object-head { display: flex; align-items: stretch; gap: 6px; padding: 8px; }
+        .settings-object-name {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 6px 8px;
+            font-family: var(--font);
+            font-size: 14px;
+            text-align: left;
+            color: var(--text);
+            background: none;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .settings-object-name:hover { background: rgba(255, 255, 255, .03); }
+        .settings-object-title { overflow-wrap: anywhere; }
+        .settings-object-count {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .settings-elements { padding: 2px 12px 14px; }
+        .settings-chips { gap: 7px; margin-bottom: 10px; }
+        .chip-del { padding-right: 4px; gap: 6px; }
+        .chip-x {
+            width: 20px;
+            height: 20px;
+            display: grid;
+            place-items: center;
+            padding: 0;
+            font-size: 13px;
+            line-height: 1;
+            color: var(--text-2);
+            background: rgba(255, 255, 255, .08);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .chip-x:hover { background: rgba(248, 113, 113, .25); color: #fca5a5; }
+        .settings-add { display: flex; gap: 8px; align-items: stretch; }
+        .settings-add .field { flex: 1; min-width: 0; padding: 11px 12px; font-size: 15px; }
+        .settings-add .btn { width: 48px; padding: 0; font-size: 20px; flex: 0 0 auto; }
+        .settings-empty { display: block; padding: 6px 0; font-size: 12.5px; color: var(--muted); }
 
         /* =================================================================
            12. НИЖНЯЯ ПАНЕЛЬ
@@ -1156,6 +1261,10 @@
         <path d="M14 2.5H7.5A1.5 1.5 0 0 0 6 4v16a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 20V6.5L14 2.5Z"/>
         <path d="M14 2.5V7h4"/><path d="M9.5 12.5h5M9.5 16h5"/>
     </symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3.2"/>
+        <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>
+    </symbol>
 </svg>
 
 <!-- =====================================================================
@@ -1251,8 +1360,15 @@
          ЭКРАН 2: ПАРАМЕТРЫ
          ================================================================= -->
     <section class="screen" id="screen-params">
-        <h2 class="screen-title">Параметры осмотра</h2>
-        <p class="screen-sub">Эти данные попадут в отчёт и в имя файла.</p>
+        <div class="screen-head">
+            <div>
+                <h2 class="screen-title">Параметры осмотра</h2>
+                <p class="screen-sub">Эти данные попадут в отчёт и в имя файла.</p>
+            </div>
+            <button class="icon-btn" id="btn-settings" title="Настройки" aria-label="Настройки списков">
+                <svg><use href="#i-settings"/></svg>
+            </button>
+        </div>
 
         <div class="card">
             <div class="field-group">
@@ -1264,11 +1380,6 @@
                 <label class="label" for="select-object">Объект</label>
                 <select class="field" id="select-object">
                     <option value="" disabled selected>Выберите объект</option>
-                    <option value="0">Северное Тушино (Сборно-разборные конструкции в стиле "Крым")</option>
-                    <option value="1">ул. Бориса Пастернака (Сборно-разборные конструкции в стиле "Крым")</option>
-                    <option value="2">Царицыно (Сборно-разборные конструкции в стиле "Царицынский")</option>
-                    <option value="3">Коломенское (Фестивально-ярмарочная площадки Коломенское)</option>
-                    <option value="other">Другое</option>
                 </select>
             </div>
 
@@ -1293,9 +1404,6 @@
                 <label class="label" for="select-contractor">Подрядчик</label>
                 <select class="field" id="select-contractor">
                     <option value="" disabled selected>Выберите подрядчика</option>
-                    <option value="0">ООО "Город Мастеров"</option>
-                    <option value="1">ООО "Ухоженный сад"</option>
-                    <option value="other">Другое</option>
                 </select>
             </div>
 
@@ -1373,6 +1481,9 @@
             </button>
         </div>
 
+        <button class="btn btn-ghost btn-block" id="btn-act">
+            <svg><use href="#i-file"/></svg> Акт осмотра
+        </button>
         <button class="btn btn-ghost btn-block" id="btn-edit-params">Параметры осмотра</button>
     </section>
 
@@ -1389,7 +1500,8 @@
                 <p class="screen-sub">Помещение: <span id="defect-room-name">—</span></p>
             </div>
         </div>
-        <p class="hint">Выберите вид работ, опишите дефект — камера откроется сразу после.</p>
+        <p class="hint">Галочка — вид работ осмотрен в этом помещении. Кнопка — добавить дефект с описанием и фото.</p>
+        <p class="inspect-progress"><span class="led" id="inspect-led"></span> Осмотрено: <b id="inspect-count">0</b> из <span id="inspect-total">0</span></p>
         <div class="type-list" id="defect-type-list"></div>
     </section>
 
@@ -1407,6 +1519,9 @@
 
         <p class="hint">Черновик осмотра сохранён на устройстве. Кнопка «Новый осмотр» очистит его.</p>
         <button class="btn btn-primary btn-block btn-lg" id="btn-new-inspection">Новый осмотр</button>
+        <button class="btn btn-ghost btn-block" id="btn-act-done">
+            <svg><use href="#i-file"/></svg> Акт осмотра
+        </button>
         <button class="btn btn-ghost btn-block" id="btn-back-to-inspection">Вернуться к осмотру</button>
     </section>
 
@@ -1534,6 +1649,69 @@
 </div>
 
 <!-- =====================================================================
+     ШТОРКА: НАСТРОЙКИ СПРАВОЧНИКОВ
+     ===================================================================== -->
+<div class="overlay" id="sheet-settings">
+    <div class="sheet sheet-tall" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="grabber"></div>
+        <div class="sheet-head">
+            <h3 class="sheet-title" id="settings-title">Настройки</h3>
+            <button class="icon-btn" id="settings-close" aria-label="Закрыть настройки">
+                <svg><use href="#i-x"/></svg>
+            </button>
+        </div>
+        <p class="sheet-sub">Списки для экрана «Параметры осмотра». Хранятся на этом устройстве.</p>
+
+        <div class="settings-section">
+            <div class="card-head">
+                <span class="label">Объекты и элементы</span>
+                <span class="counter" id="settings-objects-count">0</span>
+            </div>
+            <div class="settings-objects" id="settings-objects"></div>
+            <p class="settings-empty" id="settings-objects-empty" hidden>Объектов пока нет — добавьте первый.</p>
+            <div class="settings-add">
+                <input class="field" type="text" id="new-object-name" placeholder="Новый объект" maxlength="160" autocomplete="off">
+                <button class="btn btn-ghost" id="add-object" type="button" aria-label="Добавить объект">+</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="card-head">
+                <span class="label">Подрядчики</span>
+                <span class="counter" id="settings-contractors-count">0</span>
+            </div>
+            <div class="chips settings-chips" id="settings-contractors"></div>
+            <div class="settings-add">
+                <input class="field" type="text" id="new-contractor-name" placeholder="Новый подрядчик" maxlength="120" autocomplete="off">
+                <button class="btn btn-ghost" id="add-contractor" type="button" aria-label="Добавить подрядчика">+</button>
+            </div>
+        </div>
+
+        <button class="btn btn-ghost btn-block" id="settings-reset">Сбросить к исходным</button>
+        <button class="btn btn-primary btn-block" id="settings-done">Готово</button>
+    </div>
+</div>
+
+<!-- =====================================================================
+     ШТОРКА: ВВОД НАЗВАНИЯ
+     ===================================================================== -->
+<div class="overlay" id="sheet-prompt">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="prompt-title">
+        <div class="grabber"></div>
+        <h3 class="sheet-title" id="prompt-title">Введите значение</h3>
+        <p class="sheet-sub" id="prompt-sub"></p>
+        <div class="field-group">
+            <label class="label" for="prompt-input">Название</label>
+            <input class="field" type="text" id="prompt-input" autocomplete="off">
+        </div>
+        <div class="sheet-actions">
+            <button class="btn btn-ghost" id="prompt-cancel">Отмена</button>
+            <button class="btn btn-primary" id="prompt-ok">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================================
      КАМЕРА (во весь экран)
      ===================================================================== -->
 <div class="camera" id="camera" data-mode="live" aria-hidden="true">
@@ -1620,12 +1798,43 @@
        1. СПРАВОЧНИКИ
        Порядок видов работ в Excel сохранён один-в-один с версией 0.0.
        ================================================================= */
-    const OBJECT_DETAILS = [
-        ['Культурно-досуговый центр (Северное Тушино)', 'Фестивальная площадка (Северное Тушино)', 'Система наружного электроосвещения (Северное Тушино)'],
-        ['Культурно-досуговый центр (ул. Бориса Пастернака)', 'Фестивальная площадка (ул. Бориса Пастернака)', 'Временный прокат (ул. Бориса Пастернака)'],
-        ['Прокат (Царицыно)'],
-        ['Торговые павильоны (Коломенское)']
-    ];
+    /* Справочники по умолчанию. Правятся на экране «Настройки» и хранятся
+       на устройстве отдельно от черновика — кнопка «Новый осмотр» их не стирает. */
+    const DEFAULT_APP_SETTINGS = {
+        objects: [
+            {
+                id: 'obj-1',
+                name: 'Северное Тушино (Сборно-разборные конструкции в стиле "Крым")',
+                elements: [
+                    'Культурно-досуговый центр (Северное Тушино)',
+                    'Фестивальная площадка (Северное Тушино)',
+                    'Система наружного электроосвещения (Северное Тушино)'
+                ]
+            },
+            {
+                id: 'obj-2',
+                name: 'ул. Бориса Пастернака (Сборно-разборные конструкции в стиле "Крым")',
+                elements: [
+                    'Культурно-досуговый центр (ул. Бориса Пастернака)',
+                    'Фестивальная площадка (ул. Бориса Пастернака)',
+                    'Временный прокат (ул. Бориса Пастернака)'
+                ]
+            },
+            {
+                id: 'obj-3',
+                name: 'Царицыно (Сборно-разборные конструкции в стиле "Царицынский")',
+                elements: ['Прокат (Царицыно)']
+            },
+            {
+                id: 'obj-4',
+                name: 'Коломенское (Фестивально-ярмарочная площадки Коломенское)',
+                elements: ['Торговые павильоны (Коломенское)']
+            }
+        ],
+        contractors: ['ООО "Город Мастеров"', 'ООО "Ухоженный сад"']
+    };
+
+    const SETTINGS_KEY = 'appSettings';
 
     const DEFECT_TYPES = [
         'Крепление кабеля',
@@ -1673,10 +1882,12 @@
         objectDetail: '',
         objectLabel: '',
         contractor: '',
-        rooms: [],          // [{ id, name, photos: [Photo], defects: [{ id, type, description, photos, includeInExcel }] }]
+        /* [{ id, name, photos, inspected: { 'Вид работ': true }, defects: [...] }] */
+        rooms: [],
         activeRoomId: null,
         started: false,
-        customTypes: []     // свои виды работ, введённые через «Другое»
+        customTypes: [],    // свои виды работ, введённые через «Другое»
+        settings: null      // справочники: объекты с элементами и подрядчики
     };
 
     let currentScreen = 'start';
@@ -1998,6 +2209,7 @@
                 return {
                     id: room.id,
                     name: room.name,
+                    inspected: Object.assign({}, room.inspected || {}),
                     photos: room.photos.map(function (p) { return Object.assign({}, p); }),
                     defects: room.defects.map(function (def) {
                         return {
@@ -2031,9 +2243,16 @@
     function normalizeSnapshot(raw) {
         if (!raw || typeof raw !== 'object' || !Array.isArray(raw.rooms)) return null;
         const rooms = raw.rooms.filter(function (r) { return r && typeof r === 'object'; }).map(function (r) {
+            const inspected = {};
+            if (r.inspected && typeof r.inspected === 'object') {
+                Object.keys(r.inspected).forEach(function (type) {
+                    if (r.inspected[type]) inspected[type] = true;
+                });
+            }
             return {
                 id: String(r.id || uid()),
                 name: String(r.name || ''),
+                inspected: inspected,
                 photos: (Array.isArray(r.photos) ? r.photos : []).map(normalizePhoto).filter(Boolean),
                 defects: (Array.isArray(r.defects) ? r.defects : [])
                     .filter(function (d) { return d && typeof d === 'object'; })
@@ -2146,6 +2365,409 @@
     }
 
     /* =================================================================
+       6b. СПРАВОЧНИКИ: ОБЪЕКТЫ, ЭЛЕМЕНТЫ, ПОДРЯДЧИКИ
+       Хранятся отдельным ключом IndexedDB, правятся на экране «Настройки».
+       ================================================================= */
+    function cloneDefaultAppSettings() {
+        return JSON.parse(JSON.stringify(DEFAULT_APP_SETTINGS));
+    }
+
+    function normalizeAppSettings(raw) {
+        if (!raw || typeof raw !== 'object') return cloneDefaultAppSettings();
+        const objects = (Array.isArray(raw.objects) ? raw.objects : [])
+            .filter(function (obj) { return obj && typeof obj === 'object' && String(obj.name || '').trim(); })
+            .map(function (obj) {
+                return {
+                    id: String(obj.id || uid()),
+                    name: String(obj.name).trim(),
+                    elements: (Array.isArray(obj.elements) ? obj.elements : [])
+                        .map(function (el) { return String(el || '').trim(); })
+                        .filter(Boolean)
+                };
+            });
+        const contractors = (Array.isArray(raw.contractors) ? raw.contractors : [])
+            .map(function (name) { return String(name || '').trim(); })
+            .filter(Boolean);
+        return { objects: objects, contractors: contractors };
+    }
+
+    function loadAppSettings() {
+        return Store.getKey(SETTINGS_KEY).then(function (record) {
+            const data = record && record.data ? record.data : null;
+            state.settings = data ? normalizeAppSettings(data) : cloneDefaultAppSettings();
+        }).catch(function (err) {
+            console.warn('Настройки не прочитаны:', err);
+            state.settings = cloneDefaultAppSettings();
+        });
+    }
+
+    function saveAppSettings() {
+        Store.putKey(SETTINGS_KEY, { v: 1, data: state.settings }).catch(function (err) {
+            console.warn('Настройки не сохранены:', err);
+            toast('Не удалось сохранить настройки', 'warn', 4000);
+        });
+    }
+
+    function objectById(id) {
+        if (!state.settings) return null;
+        return state.settings.objects.find(function (obj) { return obj.id === id; }) || null;
+    }
+
+    /* Селекты на экране «Параметры» строятся из справочников */
+    function renderParamSelects() {
+        const objectSelect = $('#select-object');
+        const contractorSelect = $('#select-contractor');
+        if (!objectSelect || !contractorSelect || !state.settings) return;
+
+        const prevObject = objectSelect.value;
+        const prevContractor = contractorSelect.value;
+
+        objectSelect.innerHTML = '<option value="" disabled selected>Выберите объект</option>';
+        state.settings.objects.forEach(function (obj) {
+            objectSelect.add(new Option(obj.name, obj.id));
+        });
+        objectSelect.add(new Option('Другое', 'other'));
+
+        contractorSelect.innerHTML = '<option value="" disabled selected>Выберите подрядчика</option>';
+        state.settings.contractors.forEach(function (name) {
+            contractorSelect.add(new Option(name, name));
+        });
+        contractorSelect.add(new Option('Другое', 'other'));
+
+        const hasValue = function (select, value) {
+            if (!value) return false;
+            return Array.prototype.some.call(select.options, function (opt) { return opt.value === value; });
+        };
+        objectSelect.value = hasValue(objectSelect, prevObject) ? prevObject : '';
+        contractorSelect.value = hasValue(contractorSelect, prevContractor) ? prevContractor : '';
+    }
+
+    /* --- Окно настроек --- */
+    let settingsExpandedId = null;
+
+    function openSettings() {
+        if (!state.settings) state.settings = cloneDefaultAppSettings();
+        renderSettings();
+        openSheet('sheet-settings');
+    }
+
+    function closeSettings() {
+        closeSheet('sheet-settings');
+        renderParamSelects();
+    }
+
+    function renderSettings() {
+        const wrap = $('#settings-objects');
+        if (!wrap || !state.settings) return;
+        wrap.innerHTML = '';
+
+        state.settings.objects.forEach(function (obj) {
+            const block = document.createElement('div');
+            block.className = 'settings-object';
+
+            const head = document.createElement('div');
+            head.className = 'settings-object-head';
+
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'settings-object-name';
+            toggle.innerHTML = '<span class="settings-object-title">' + escapeHtml(obj.name) + '</span>' +
+                '<span class="settings-object-count">' + obj.elements.length + ' ' +
+                plural(obj.elements.length, 'элемент', 'элемента', 'элементов') + '</span>';
+            toggle.addEventListener('click', function () {
+                settingsExpandedId = settingsExpandedId === obj.id ? null : obj.id;
+                renderSettings();
+            });
+            head.appendChild(toggle);
+
+            const rename = document.createElement('button');
+            rename.type = 'button';
+            rename.className = 'icon-btn';
+            rename.title = 'Переименовать объект';
+            rename.setAttribute('aria-label', 'Переименовать объект');
+            rename.innerHTML = '<svg><use href="#i-pencil"/></svg>';
+            rename.addEventListener('click', function () { renameObject(obj.id); });
+            head.appendChild(rename);
+
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'icon-btn danger';
+            remove.title = 'Удалить объект';
+            remove.setAttribute('aria-label', 'Удалить объект');
+            remove.innerHTML = '<svg><use href="#i-trash"/></svg>';
+            remove.addEventListener('click', function () { deleteObject(obj.id); });
+            head.appendChild(remove);
+
+            block.appendChild(head);
+
+            const body = document.createElement('div');
+            body.className = 'settings-elements';
+            body.hidden = settingsExpandedId !== obj.id;
+
+            const chips = document.createElement('div');
+            chips.className = 'chips settings-chips';
+            if (!obj.elements.length) {
+                const empty = document.createElement('span');
+                empty.className = 'settings-empty';
+                empty.textContent = 'Элементов пока нет';
+                chips.appendChild(empty);
+            }
+            obj.elements.forEach(function (element) {
+                const chip = document.createElement('span');
+                chip.className = 'chip chip-del';
+                const text = document.createElement('span');
+                text.textContent = element;
+                chip.appendChild(text);
+                const x = document.createElement('button');
+                x.type = 'button';
+                x.className = 'chip-x';
+                x.textContent = '×';
+                x.setAttribute('aria-label', 'Удалить элемент');
+                x.addEventListener('click', function () { removeElement(obj.id, element); });
+                chip.appendChild(x);
+                chips.appendChild(chip);
+            });
+            body.appendChild(chips);
+
+            const addRow = document.createElement('div');
+            addRow.className = 'settings-add';
+            const input = document.createElement('input');
+            input.className = 'field';
+            input.type = 'text';
+            input.placeholder = 'Новый элемент объекта';
+            input.maxLength = 120;
+            input.autocomplete = 'off';
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'btn btn-ghost';
+            addBtn.textContent = '+';
+            addBtn.setAttribute('aria-label', 'Добавить элемент');
+            const submit = function () {
+                addElement(obj.id, input.value);
+            };
+            addBtn.addEventListener('click', submit);
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submit();
+                }
+            });
+            addRow.appendChild(input);
+            addRow.appendChild(addBtn);
+            body.appendChild(addRow);
+
+            block.appendChild(body);
+            wrap.appendChild(block);
+        });
+
+        const empty = $('#settings-objects-empty');
+        if (empty) empty.hidden = state.settings.objects.length > 0;
+
+        const objCount = $('#settings-objects-count');
+        if (objCount) objCount.textContent = state.settings.objects.length;
+
+        const contractorsBox = $('#settings-contractors');
+        contractorsBox.innerHTML = '';
+        if (!state.settings.contractors.length) {
+            const note = document.createElement('span');
+            note.className = 'settings-empty';
+            note.textContent = 'Подрядчиков пока нет';
+            contractorsBox.appendChild(note);
+        }
+        state.settings.contractors.forEach(function (name) {
+            const chip = document.createElement('span');
+            chip.className = 'chip chip-del';
+            const text = document.createElement('span');
+            text.textContent = name;
+            chip.appendChild(text);
+            const x = document.createElement('button');
+            x.type = 'button';
+            x.className = 'chip-x';
+            x.textContent = '×';
+            x.setAttribute('aria-label', 'Удалить подрядчика');
+            x.addEventListener('click', function () { removeContractor(name); });
+            chip.appendChild(x);
+            contractorsBox.appendChild(chip);
+        });
+
+        const contractorCount = $('#settings-contractors-count');
+        if (contractorCount) contractorCount.textContent = state.settings.contractors.length;
+    }
+
+    function addObject(name) {
+        const clean = String(name || '').trim();
+        if (!clean) {
+            toast('Введите название объекта', 'warn');
+            return;
+        }
+        const exists = state.settings.objects.some(function (obj) {
+            return obj.name.toLowerCase() === clean.toLowerCase();
+        });
+        if (exists) {
+            toast('Такой объект уже есть', 'warn');
+            return;
+        }
+        const obj = { id: uid(), name: clean, elements: [] };
+        state.settings.objects.push(obj);
+        settingsExpandedId = obj.id;
+        saveAppSettings();
+        renderSettings();
+        renderParamSelects();
+        $('#new-object-name').value = '';
+        toast('Объект добавлен', 'ok');
+    }
+
+    function renameObject(id) {
+        const obj = objectById(id);
+        if (!obj) return;
+        uiPrompt({
+            title: 'Переименовать объект',
+            message: 'Название попадёт в отчёт и в акт.',
+            value: obj.name,
+            placeholder: 'Название объекта'
+        }).then(function (value) {
+            if (value === null) return;
+            const clean = value.trim();
+            if (!clean) {
+                toast('Название не может быть пустым', 'warn');
+                return;
+            }
+            const duplicate = state.settings.objects.some(function (other) {
+                return other.id !== id && other.name.toLowerCase() === clean.toLowerCase();
+            });
+            if (duplicate) {
+                toast('Такой объект уже есть', 'warn');
+                return;
+            }
+            obj.name = clean;
+            saveAppSettings();
+            renderSettings();
+            renderParamSelects();
+        });
+    }
+
+    function deleteObject(id) {
+        const obj = objectById(id);
+        if (!obj) return;
+        uiConfirm({
+            title: 'Удалить объект?',
+            message: '«' + obj.name + '» и его элементы исчезнут из списков. Уже созданные осмотры не изменятся.',
+            okText: 'Удалить',
+            danger: true
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            state.settings.objects = state.settings.objects.filter(function (item) { return item.id !== id; });
+            if (settingsExpandedId === id) settingsExpandedId = null;
+            saveAppSettings();
+            renderSettings();
+            renderParamSelects();
+            toast('Объект удалён');
+        });
+    }
+
+    function addElement(id, name) {
+        const obj = objectById(id);
+        if (!obj) return;
+        const clean = String(name || '').trim();
+        if (!clean) {
+            toast('Введите название элемента', 'warn');
+            return;
+        }
+        const exists = obj.elements.some(function (el) { return el.toLowerCase() === clean.toLowerCase(); });
+        if (exists) {
+            toast('Такой элемент уже есть', 'warn');
+            return;
+        }
+        obj.elements.push(clean);
+        saveAppSettings();
+        renderSettings();
+        toast('Элемент добавлен', 'ok');
+    }
+
+    function removeElement(id, element) {
+        const obj = objectById(id);
+        if (!obj) return;
+        obj.elements = obj.elements.filter(function (el) { return el !== element; });
+        saveAppSettings();
+        renderSettings();
+    }
+
+    function addContractor(name) {
+        const clean = String(name || '').trim();
+        if (!clean) {
+            toast('Введите название подрядчика', 'warn');
+            return;
+        }
+        const exists = state.settings.contractors.some(function (item) {
+            return item.toLowerCase() === clean.toLowerCase();
+        });
+        if (exists) {
+            toast('Такой подрядчик уже есть', 'warn');
+            return;
+        }
+        state.settings.contractors.push(clean);
+        saveAppSettings();
+        renderSettings();
+        renderParamSelects();
+        $('#new-contractor-name').value = '';
+        toast('Подрядчик добавлен', 'ok');
+    }
+
+    function removeContractor(name) {
+        state.settings.contractors = state.settings.contractors.filter(function (item) { return item !== name; });
+        saveAppSettings();
+        renderSettings();
+        renderParamSelects();
+    }
+
+    function resetAppSettings() {
+        uiConfirm({
+            title: 'Сбросить настройки?',
+            message: 'Списки объектов, элементов и подрядчиков вернутся к исходным. Ваши добавления пропадут.',
+            okText: 'Сбросить',
+            danger: true
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            state.settings = cloneDefaultAppSettings();
+            settingsExpandedId = null;
+            saveAppSettings();
+            renderSettings();
+            renderParamSelects();
+            toast('Списки сброшены к исходным', 'ok');
+        });
+    }
+
+    /* --- Мини-диалог ввода (переименование объекта) --- */
+    let promptResolver = null;
+
+    function uiPrompt(options) {
+        const opts = options || {};
+        return new Promise(function (resolve) {
+            $('#prompt-title').textContent = opts.title || 'Введите значение';
+            $('#prompt-sub').textContent = opts.message || '';
+            const input = $('#prompt-input');
+            input.value = opts.value || '';
+            input.placeholder = opts.placeholder || '';
+            input.maxLength = 160;
+            input.classList.remove('invalid');
+            promptResolver = resolve;
+            openSheet('sheet-prompt');
+            setTimeout(function () {
+                try { input.focus(); input.select(); } catch (err) { /* игнорируем */ }
+            }, 130);
+        });
+    }
+
+    function resolvePrompt(value) {
+        closeSheet('sheet-prompt');
+        if (promptResolver) {
+            const resolve = promptResolver;
+            promptResolver = null;
+            resolve(value);
+        }
+    }
+
+    /* =================================================================
        7. ЭКРАН ПАРАМЕТРОВ
        ================================================================= */
     function setTodayDate() {
@@ -2184,8 +2806,9 @@
             selectWrap.hidden = true;
             objectText.hidden = false;
         } else if (value !== '') {
+            const obj = objectById(value);
             details.hidden = false;
-            (OBJECT_DETAILS[Number(value)] || []).forEach(function (item) {
+            (obj ? obj.elements : []).forEach(function (item) {
                 detailSelect.add(new Option(item, item));
             });
             detailSelect.add(new Option('Другое', 'other'));
@@ -2222,17 +2845,21 @@
             toast('Выберите объект', 'warn');
             return;
         }
-        const objectBase = objectSelect.options[objectSelect.selectedIndex].text;
+
+        let objectBase = '';
         let objectDetail = '';
 
         if (objectSelect.value === 'other') {
-            objectDetail = $('#input-object-custom').value.trim();
-            if (!objectDetail) {
+            objectBase = $('#input-object-custom').value.trim();
+            if (!objectBase) {
                 markInvalid('#input-object-custom');
                 toast('Введите название объекта', 'warn');
                 return;
             }
+            objectDetail = 'Не указано';
         } else {
+            const obj = objectById(objectSelect.value);
+            objectBase = obj ? obj.name : objectSelect.options[objectSelect.selectedIndex].text;
             const detailValue = $('#select-object-detail').value;
             if (detailValue === 'other') {
                 objectDetail = $('#input-detail-custom').value.trim();
@@ -2313,6 +2940,12 @@
                         $('#input-detail-custom').value = state.objectDetail;
                     }
                 }
+            } else {
+                /* Объекта нет в справочнике — показываем его как «Другое»,
+                   чтобы данные старого черновика не потерялись. */
+                objectSelect.value = 'other';
+                handleObjectChange();
+                $('#input-object-custom').value = state.objectBase;
             }
         }
         const contractorSelect = $('#select-contractor');
@@ -2335,7 +2968,7 @@
        8. ПОМЕЩЕНИЯ
        ================================================================= */
     function makeRoom(name) {
-        return { id: uid(), name: name || '', photos: [], defects: [] };
+        return { id: uid(), name: name || '', inspected: {}, photos: [], defects: [] };
     }
 
     /* Пустое название больше не блокирует съёмку:
@@ -2686,11 +3319,15 @@
         if (!list) return;
         list.innerHTML = '';
 
+        const room = activeRoom();
+        const inspected = (room && room.inspected) || {};
+
         /* Стандартные виды работ + сохранённые «свои» — одним списком */
         DEFECT_TYPES.concat(state.customTypes).forEach(function (type, index) {
             const custom = isCustomType(type);
             const row = document.createElement('div');
             row.className = custom ? 'type-row' : 'type-item';
+            row.dataset.type = type;
 
             const button = document.createElement('button');
             button.type = 'button';
@@ -2701,6 +3338,21 @@
                 '<span class="type-name">' + escapeHtml(type) + '</span>';
             button.addEventListener('click', function () { pickDefectType(type); });
             row.appendChild(button);
+
+            /* Галочка справа: «Другое» — это действие создания своего вида
+               работ, а не вид работ, который можно «осмотреть» */
+            if (type !== 'Другое') {
+                const checkWrap = document.createElement('label');
+                checkWrap.className = 'type-check';
+                checkWrap.title = 'Вид работ осмотрен в этом помещении';
+                const check = document.createElement('input');
+                check.type = 'checkbox';
+                check.setAttribute('data-inspect', '1');
+                check.checked = !!inspected[type];
+                check.setAttribute('aria-label', 'Осмотрено: ' + type);
+                checkWrap.appendChild(check);
+                row.appendChild(checkWrap);
+            }
 
             if (custom) {
                 const forget = document.createElement('button');
@@ -2715,6 +3367,23 @@
 
             list.appendChild(row);
         });
+
+        updateInspectProgress();
+    }
+
+    /* Сколько видов работ отмечено как осмотренные в активном помещении */
+    function updateInspectProgress() {
+        const room = activeRoom();
+        const all = DEFECT_TYPES.filter(function (type) { return type !== 'Другое'; })
+            .concat(state.customTypes);
+        const inspected = (room && room.inspected) || {};
+        const count = all.filter(function (type) { return !!inspected[type]; }).length;
+
+        const counter = $('#inspect-count');
+        const total = $('#inspect-total');
+        if (counter) counter.textContent = count;
+        if (total) total.textContent = all.length;
+        setLed('#inspect-led', count > 0 ? 'ok' : 'off');
     }
 
     function pickDefectType(type) {
@@ -2830,6 +3499,8 @@
             includeInExcel: true,
             photos: []
         };
+        if (!room.inspected) room.inspected = {};
+        room.inspected[defect.type] = true;
         room.defects.push(defect);
         closeSheet('sheet-defect');
         renderInspection();
@@ -2854,6 +3525,8 @@
             includeInExcel: true,
             photos: []
         };
+        if (!room.inspected) room.inspected = {};
+        room.inspected[defect.type] = true;
         room.defects.push(defect);
         /* Запоминаем название для будущих осмотров */
         rememberCustomType(name);
@@ -3656,24 +4329,34 @@
 
     function collectReportRows() {
         const rows = [];
+
+        /* Для одного вида работ: строки по отмеченным дефектам; если дефектов
+           нет вовсе, но вид работ отмечен «Осмотрено» — пустая строка. */
         const collect = function (type) {
             state.rooms.forEach(function (room) {
-                room.defects.forEach(function (def) {
-                    if (def.type === type && defectGoesToReport(def)) {
-                        rows.push({ type: def.type, description: def.description || '' });
-                    }
-                });
+                const anyDefects = room.defects.filter(function (def) { return def.type === type; });
+                if (anyDefects.length) {
+                    anyDefects.forEach(function (def) {
+                        if (defectGoesToReport(def)) {
+                            rows.push({ type: def.type, description: def.description || '' });
+                        }
+                    });
+                } else if (room.inspected && room.inspected[type]) {
+                    rows.push({ type: type, description: '' });
+                }
             });
         };
 
         /* Порядок: сначала фиксированные виды работ, затем свои — как в 0.0 */
         const customTypes = [];
+        const addCustom = function (type) {
+            if (!type || EXCEL_ORDER.indexOf(type) !== -1) return;
+            if (customTypes.indexOf(type) !== -1) return;
+            customTypes.push(type);
+        };
         state.rooms.forEach(function (room) {
-            room.defects.forEach(function (def) {
-                if (EXCEL_ORDER.indexOf(def.type) === -1 && customTypes.indexOf(def.type) === -1) {
-                    customTypes.push(def.type);
-                }
-            });
+            room.defects.forEach(function (def) { addCustom(def.type); });
+            Object.keys(room.inspected || {}).forEach(addCustom);
         });
 
         EXCEL_ORDER.forEach(collect);
@@ -3809,6 +4492,18 @@
                 renderDone();
                 goToScreen('done');
                 toast('Архив готов и скачивается', 'ok');
+
+                /* Диалог об акте — после того как экран «Готово» отрисован */
+                setTimeout(function () {
+                    uiConfirm({
+                        title: 'Акт осмотра',
+                        message: 'Отчёт сформирован. Открыть акт и заполнить его данными осмотра?',
+                        okText: 'Открыть акт',
+                        cancelText: 'Позже'
+                    }).then(function (open) {
+                        if (open) openAct();
+                    });
+                }, 400);
             });
         }).catch(function (err) {
             console.error('Сборка архива:', err);
@@ -3817,6 +4512,76 @@
             exporting = false;
             hideBusy();
         });
+    }
+
+    /* =================================================================
+       17b. АКТ ОСМОТРА
+       Отдельная страница akt.html получает данные через localStorage.
+       ================================================================= */
+    const ACT_PREFILL_KEY = 'elektroosmotr_act_prefill_v1';
+
+    function buildActPayload() {
+        const rows = collectReportRows();
+        const works = [];
+        const byType = {};
+
+        rows.forEach(function (row) {
+            if (!byType[row.type]) {
+                byType[row.type] = { type: row.type, remarks: [] };
+                works.push(byType[row.type]);
+            }
+            const text = String(row.description || '').trim();
+            if (text) byType[row.type].remarks.push(text);
+        });
+
+        const objectParts = [];
+        if (state.objectBase) objectParts.push(state.objectBase);
+        if (state.objectDetail && state.objectDetail !== 'Не указано') objectParts.push(state.objectDetail);
+
+        return {
+            object: objectParts.join(' ').replace(/\s+/g, ' ').trim(),
+            rooms: state.rooms.map(function (room) { return room.name; }).join('; '),
+            date: state.date,
+            works: works
+        };
+    }
+
+    async function openAct() {
+        if (!state.rooms.length) {
+            toast('Сначала начните осмотр', 'warn');
+            return;
+        }
+
+        const payload = buildActPayload();
+        try {
+            localStorage.setItem(ACT_PREFILL_KEY, JSON.stringify(payload));
+        } catch (err) {
+            console.warn('Данные для акта не сохранены:', err);
+            toast('Не удалось передать данные в акт', 'err', 4000);
+            return;
+        }
+
+        /* Сохраняем черновик, чтобы вернуться в то же состояние */
+        try {
+            await Store.put({ v: 1, savedAt: Date.now(), data: snapshot() });
+            setSaveState('сохранено ' + new Date().toLocaleTimeString('ru-RU', {
+                hour: '2-digit', minute: '2-digit'
+            }));
+        } catch (err) {
+            console.warn('Черновик перед актом не сохранён:', err);
+        }
+
+        if (location.protocol !== 'file:') {
+            try {
+                const response = await fetch('akt.html', { method: 'HEAD', cache: 'no-store' });
+                if (!response.ok) throw new Error('status ' + response.status);
+            } catch (err) {
+                toast('Файл акта не найден рядом с приложением (akt.html)', 'err', 6000);
+                return;
+            }
+        }
+
+        location.href = 'akt.html';
     }
 
     function renderDone() {
@@ -4001,12 +4766,68 @@
             scheduleSave();
         });
 
-        $('#defect-ok').addEventListener('click', confirmDefectSheet);        $('#defect-cancel').addEventListener('click', function () {
+        $('#defect-ok').addEventListener('click', confirmDefectSheet);
+        $('#defect-cancel').addEventListener('click', function () {
             closeSheet('sheet-defect');
             defectEditingId = null;
         });
         $('#other-ok').addEventListener('click', confirmOtherDefect);
         $('#other-cancel').addEventListener('click', function () { closeSheet('sheet-other'); });
+
+        /* --- галочки «Осмотрено» в списке видов работ --- */
+        $('#defect-type-list').addEventListener('change', function (event) {
+            const input = event.target;
+            if (!input || input.getAttribute('data-inspect') === null) return;
+            const row = input.closest('[data-type]');
+            const room = activeRoom();
+            if (!row || !room) return;
+            const type = row.dataset.type;
+            if (!room.inspected) room.inspected = {};
+            if (input.checked) {
+                room.inspected[type] = true;
+            } else {
+                delete room.inspected[type];
+            }
+            updateInspectProgress();
+            scheduleSave();
+        });
+
+        /* --- настройки справочников --- */
+        $('#btn-settings').addEventListener('click', openSettings);
+        $('#settings-close').addEventListener('click', closeSettings);
+        $('#settings-done').addEventListener('click', closeSettings);
+        $('#settings-reset').addEventListener('click', resetAppSettings);
+        $('#add-object').addEventListener('click', function () {
+            addObject($('#new-object-name').value);
+        });
+        $('#new-object-name').addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            addObject($('#new-object-name').value);
+        });
+        $('#add-contractor').addEventListener('click', function () {
+            addContractor($('#new-contractor-name').value);
+        });
+        $('#new-contractor-name').addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            addContractor($('#new-contractor-name').value);
+        });
+
+        /* --- диалог ввода названия --- */
+        $('#prompt-ok').addEventListener('click', function () {
+            resolvePrompt($('#prompt-input').value.trim());
+        });
+        $('#prompt-cancel').addEventListener('click', function () { resolvePrompt(null); });
+        $('#prompt-input').addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            resolvePrompt($('#prompt-input').value.trim());
+        });
+
+        /* --- акт осмотра --- */
+        $('#btn-act').addEventListener('click', openAct);
+        $('#btn-act-done').addEventListener('click', openAct);
 
         /* --- выгрузка --- */
         $('#btn-export').addEventListener('click', openExportSheet);
@@ -4056,6 +4877,10 @@
                     resolveConfirm(false);
                     return;
                 }
+                if (overlay.id === 'sheet-prompt') {
+                    resolvePrompt(null);
+                    return;
+                }
                 closeSheet(overlay.id);
                 if (overlay.id === 'sheet-defect') defectEditingId = null;
             });
@@ -4080,6 +4905,8 @@
             if (open.length) {
                 const top = open[open.length - 1];
                 if (top.id === 'sheet-confirm') resolveConfirm(false);
+                else if (top.id === 'sheet-prompt') resolvePrompt(null);
+                else if (top.id === 'sheet-settings') closeSettings();
                 else closeSheet(top.id);
                 return;
             }
@@ -4227,9 +5054,17 @@
                 try { history.replaceState({ screen: 'start' }, ''); } catch (err) { /* file:// */ }
             }
             renderSystemCheck();
-            checkDraft();
             setupInstall();
             registerServiceWorker();
+            /* Сначала справочники, затем черновик: иначе объект из черновика
+               не найдётся в селекте. */
+            loadAppSettings().then(function () {
+                renderParamSelects();
+                renderSettings();
+                return checkDraft();
+            }).catch(function (err) {
+                console.warn('Загрузка справочников:', err);
+            });
             loadCustomTypes().then(function () {
                 if (currentScreen === 'defect') renderDefectTypes();
             });

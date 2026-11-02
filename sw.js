@@ -7,11 +7,12 @@
    версию кэша ниже (v1 → v2). Сама страница обновляется автоматически.
    ===================================================================== */
 
-const CACHE = 'elektroosmotr-v2';
+const CACHE = 'elektroosmotr-v3';
 
 const SHELL = [
     './',
     './index.html',
+    './akt.html',
     './manifest.webmanifest',
     './icons/icon-192.png',
     './icons/icon-512.png',
