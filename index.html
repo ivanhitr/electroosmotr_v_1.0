@@ -1,0 +1,4068 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#070a0e">
+    <meta name="color-scheme" content="dark">
+    <title>Электроосмотр · VO 1.0</title>
+
+    <!-- Установка как приложение (PWA). Работает по https, файлы лежат рядом. -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Электроосмотр">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <style>
+        /* =================================================================
+           1. ТОКЕНЫ ТЕМЫ
+           «Электролаборатория»: глубокий графит, сетка-миллиметровка,
+           циановый акцент, моноширинные служебные подписи.
+           ================================================================= */
+        :root {
+            --bg:          #070a0e;
+            --bg-2:        #05080b;
+            --surface:     #0e151c;
+            --surface-2:   #121b24;
+            --line:        #1c2833;
+            --line-2:      #24333f;
+            --text:        #e6eef5;
+            --text-2:      #a9bbc9;
+            --muted:       #71828f;
+            --accent:      #22d3ee;
+            --accent-2:    #0891b2;
+            --accent-ink:  #04222b;
+            --lime:        #a3e635;
+            --amber:       #fbbf24;
+            --danger:      #f87171;
+            --radius:      16px;
+            --radius-sm:   12px;
+            --font:        system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --mono:        ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+            --safe-b:      env(safe-area-inset-bottom, 0px);
+            --safe-t:      env(safe-area-inset-top, 0px);
+        }
+
+        /* =================================================================
+           2. СБРОС И БАЗА
+           ================================================================= */
+        *, *::before, *::after { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            margin: 0;
+            min-height: 100dvh;
+            font-family: var(--font);
+            font-size: 15px;
+            line-height: 1.45;
+            color: var(--text);
+            background: var(--bg);
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Фон: свечение сверху + сетка «миллиметровки» */
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::before {
+            background:
+                radial-gradient(900px 520px at 50% -18%, rgba(34, 211, 238, .11), transparent 66%),
+                linear-gradient(180deg, #070a0e 0%, #05080b 100%);
+        }
+        body::after {
+            background-image:
+                linear-gradient(rgba(120, 190, 220, .048) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(120, 190, 220, .048) 1px, transparent 1px);
+            background-size: 28px 28px;
+            -webkit-mask-image: radial-gradient(circle at 50% 0%, #000 0%, transparent 82%);
+            mask-image: radial-gradient(circle at 50% 0%, #000 0%, transparent 82%);
+        }
+
+        [hidden] { display: none !important; }
+        .no-scroll { overflow: hidden; }
+
+        ::selection { background: rgba(34, 211, 238, .3); }
+
+        /* =================================================================
+           3. КАРКАС
+           ================================================================= */
+        .svg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+        .ico { display: block; }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            padding-top: var(--safe-t);
+            background: linear-gradient(180deg, rgba(7, 10, 14, .94), rgba(7, 10, 14, .72));
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        .topbar-inner {
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 11px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+        .brand-mark {
+            width: 36px; height: 36px;
+            flex: 0 0 auto;
+            display: grid; place-items: center;
+            border-radius: 11px;
+            color: var(--accent);
+            border: 1px solid rgba(34, 211, 238, .35);
+            background: radial-gradient(circle at 50% 25%, rgba(34, 211, 238, .2), rgba(34, 211, 238, .04));
+            box-shadow: 0 0 22px -8px rgba(34, 211, 238, .8), inset 0 1px 0 rgba(255, 255, 255, .07);
+        }
+        .brand-title {
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .17em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .brand-sub {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+        .topbar-right { display: flex; align-items: center; gap: 9px; flex: 0 0 auto; }
+        .save-state {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 0 16px calc(118px + var(--safe-b));
+        }
+
+        /* =================================================================
+           4. ШАГИ
+           ================================================================= */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 14px 0 18px;
+        }
+        .step {
+            padding-top: 8px;
+            border-top: 2px solid var(--line);
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            transition: color .25s, border-color .25s, box-shadow .25s;
+        }
+        .step span { opacity: .6; margin-right: 4px; }
+        .step.is-active {
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 -8px 20px -12px rgba(34, 211, 238, .9);
+        }
+        .step.is-done { color: var(--text-2); border-color: var(--line-2); }
+        body[data-screen="start"] .steps { display: none; }
+
+        /* =================================================================
+           5. ЭКРАНЫ
+           ================================================================= */
+        .screen { display: none; }
+        .screen.active { display: block; animation: rise .26s cubic-bezier(.2, .8, .25, 1); }
+        @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+        .screen-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -.01em;
+            margin: 0 0 6px;
+        }
+        .screen-sub { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
+        .screen-head { display: flex; align-items: flex-start; gap: 12px; margin: 4px 0 10px; }
+        .screen-head .screen-title { margin-bottom: 2px; }
+        .screen-head .screen-sub { margin-bottom: 0; }
+
+        /* =================================================================
+           6. ХИРО (стартовый экран)
+           ================================================================= */
+        .hero { text-align: center; padding: 28px 0 20px; }
+        .hero-mark {
+            width: 78px; height: 78px;
+            margin: 0 auto 20px;
+            display: grid; place-items: center;
+            border-radius: 24px;
+            color: var(--accent);
+            border: 1px solid rgba(34, 211, 238, .35);
+            background: radial-gradient(circle at 50% 30%, rgba(34, 211, 238, .22), rgba(34, 211, 238, .03));
+            box-shadow: 0 0 58px -14px rgba(34, 211, 238, .65), inset 0 1px 0 rgba(255, 255, 255, .08);
+        }
+        .hero-title {
+            font-size: clamp(32px, 10.5vw, 44px);
+            line-height: 1.02;
+            font-weight: 800;
+            letter-spacing: -.02em;
+            text-transform: uppercase;
+            margin: 12px 0 12px;
+        }
+        .hero-title span { color: var(--accent); }
+        .hero-text {
+            font-size: 14px;
+            line-height: 1.55;
+            color: var(--text-2);
+            max-width: 34ch;
+            margin: 0 auto;
+        }
+        .footnote {
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 18px 0 0;
+        }
+        .check-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+        .check-list li { display: flex; align-items: flex-start; gap: 12px; }
+        .check-list b { display: block; font-size: 14px; font-weight: 600; }
+        .check-list small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .check-list .led { margin-top: 6px; }
+
+        /* Карточка установки приложения */
+        .install-card { border-color: rgba(34, 211, 238, .28); }
+        .install-text {
+            margin: 0 0 14px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-2);
+        }
+        .install-hint {
+            margin: 10px 0 0;
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--muted);
+        }
+
+        /* =================================================================
+           7. КАРТОЧКИ, ПОДПИСИ, СВЕТОДИОДЫ
+           ================================================================= */
+        .card {
+            position: relative;
+            padding: 16px;
+            margin-bottom: 14px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: linear-gradient(180deg, var(--surface-2), var(--surface));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 22px 44px -34px rgba(0, 0, 0, .95);
+        }
+        .card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .label {
+            display: block;
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .led {
+            width: 7px; height: 7px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: var(--lime);
+            box-shadow: 0 0 10px rgba(163, 230, 53, .85);
+        }
+        .led.warn { background: var(--amber); box-shadow: 0 0 10px rgba(251, 191, 36, .85); }
+        .led.err  { background: var(--danger); box-shadow: 0 0 10px rgba(248, 113, 113, .85); }
+        .led.off  { background: #39485a; box-shadow: none; }
+        .counter {
+            font-family: var(--mono);
+            font-size: 11.5px;
+            color: var(--accent);
+            padding: 2px 9px;
+            min-width: 30px;
+            text-align: center;
+            border-radius: 999px;
+            border: 1px solid rgba(34, 211, 238, .3);
+            background: rgba(34, 211, 238, .07);
+        }
+        .counter-danger {
+            color: #fca5a5;
+            border-color: rgba(248, 113, 113, .35);
+            background: rgba(248, 113, 113, .08);
+        }
+        .status-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 12.5px;
+            color: var(--muted);
+        }
+        .empty {
+            margin: 4px 0 12px;
+            padding: 16px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--muted);
+            border: 1px dashed var(--line-2);
+            border-radius: var(--radius-sm);
+        }
+        .hint {
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: #e6c976;
+            background: rgba(251, 191, 36, .06);
+            border: 1px solid rgba(251, 191, 36, .2);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin: 0 0 14px;
+        }
+
+        /* =================================================================
+           8. ПОЛЯ ВВОДА
+           ================================================================= */
+        .field-group + .field-group { margin-top: 16px; }
+        .field-group .label { margin-bottom: 8px; }
+
+        .field {
+            width: 100%;
+            padding: 13px 14px;
+            font-family: var(--font);
+            font-size: 16px; /* 16px — чтобы Android не зумил поле */
+            color: var(--text);
+            background: #080d12;
+            border: 1px solid var(--line-2);
+            border-radius: var(--radius-sm);
+            transition: border-color .2s, box-shadow .2s;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .field::placeholder { color: #4d5d6b; }
+        .field:focus {
+            outline: none;
+            border-color: rgba(34, 211, 238, .7);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, .14), 0 0 24px -8px rgba(34, 211, 238, .6);
+        }
+        .field.invalid {
+            border-color: rgba(248, 113, 113, .8);
+            box-shadow: 0 0 0 3px rgba(248, 113, 113, .13);
+        }
+        select.field {
+            padding-right: 40px;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371828f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+        }
+        input[type="date"].field { min-height: 50px; }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(.75) sepia(1) saturate(4) hue-rotate(140deg);
+            opacity: .9;
+            cursor: pointer;
+        }
+        .field--area {
+            min-height: 96px;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        /* =================================================================
+           9. КНОПКИ
+           ================================================================= */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 13px 18px;
+            font-family: var(--font);
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.1;
+            color: var(--text);
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: transform .12s, box-shadow .2s, background .2s, border-color .2s, color .2s;
+        }
+        .btn:active { transform: scale(.98); }
+        .btn:disabled { opacity: .5; cursor: default; }
+        .btn svg { width: 18px; height: 18px; flex: 0 0 auto; }
+        .btn-block { width: 100%; }
+        .btn-lg { padding: 16px 20px; font-size: 16px; }
+        .btn + .btn { margin-top: 10px; }
+
+        .btn-primary {
+            color: var(--accent-ink);
+            background: linear-gradient(180deg, #3ee3f6, #17c2d8);
+            box-shadow: 0 12px 30px -14px rgba(34, 211, 238, .85), inset 0 1px 0 rgba(255, 255, 255, .45);
+        }
+        .btn-primary:active { box-shadow: 0 6px 16px -12px rgba(34, 211, 238, .9); }
+        .btn-ghost {
+            color: var(--text-2);
+            background: rgba(255, 255, 255, .03);
+            border-color: var(--line-2);
+        }
+        .btn-ghost:hover { color: var(--text); border-color: rgba(34, 211, 238, .4); }
+        .btn-warn {
+            color: #fcd34d;
+            background: rgba(251, 191, 36, .07);
+            border-color: rgba(251, 191, 36, .32);
+        }
+        .btn-danger {
+            color: #fca5a5;
+            background: rgba(248, 113, 113, .08);
+            border-color: rgba(248, 113, 113, .34);
+        }
+
+        .icon-btn {
+            width: 38px; height: 38px;
+            display: grid; place-items: center;
+            color: var(--text-2);
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: color .2s, border-color .2s, background .2s;
+        }
+        .icon-btn svg { width: 17px; height: 17px; }
+        .icon-btn:hover { color: var(--accent); border-color: rgba(34, 211, 238, .4); }
+        .icon-btn.danger:hover { color: #fca5a5; border-color: rgba(248, 113, 113, .45); }
+        .head-actions { display: flex; gap: 7px; }
+
+        .split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+        .split .btn + .btn { margin-top: 0; }
+
+        /* =================================================================
+           10. ОБЪЕКТ-КАРТОЧКА
+           ================================================================= */
+        .object-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(18, 27, 36, .92), rgba(13, 20, 27, .78));
+        }
+        .object-card::after {
+            content: "";
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--accent), transparent);
+        }
+        .object-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+        .object-value { font-size: 15px; font-weight: 600; text-align: right; }
+        .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .05em;
+            color: var(--text-2);
+            background: rgba(255, 255, 255, .02);
+            border: 1px solid var(--line-2);
+            border-radius: 999px;
+        }
+
+        /* =================================================================
+           11. ФОТО И ДЕФЕКТЫ
+           ================================================================= */
+        .thumbs {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+            gap: 8px;
+        }
+        .thumbs .empty { grid-column: 1 / -1; margin: 0; }
+        .thumb {
+            position: relative;
+            margin: 0;
+            aspect-ratio: 1;
+            overflow: hidden;
+            border: 1px solid var(--line-2);
+            border-radius: 10px;
+            background: #05080b;
+        }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .thumb .thumb-del {
+            position: absolute;
+            top: 4px; right: 4px;
+            width: 22px; height: 22px;
+            display: grid; place-items: center;
+            font-size: 13px;
+            line-height: 1;
+            color: #fff;
+            background: rgba(5, 8, 11, .62);
+            border: 1px solid rgba(255, 255, 255, .18);
+            border-radius: 50%;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+        }
+        .thumb .thumb-del:active { transform: scale(.92); }
+
+        .defect-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+        .defect-card {
+            padding: 12px;
+            border: 1px solid rgba(248, 113, 113, .22);
+            border-radius: var(--radius-sm);
+            background: linear-gradient(180deg, rgba(248, 113, 113, .06), rgba(248, 113, 113, .015));
+        }
+        .defect-head { display: flex; align-items: flex-start; gap: 10px; }
+        .defect-icon {
+            width: 28px; height: 28px;
+            flex: 0 0 auto;
+            display: grid; place-items: center;
+            color: #fca5a5;
+            background: rgba(248, 113, 113, .12);
+            border-radius: 8px;
+        }
+        .defect-icon svg { width: 15px; height: 15px; }
+        .defect-text { flex: 1; min-width: 0; }
+        .defect-type { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+        .defect-desc { margin-top: 2px; font-size: 12.5px; color: var(--text-2); overflow-wrap: anywhere; }
+        .defect-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+        .defect-actions .icon-btn { width: 32px; height: 32px; }
+        .thumb-row {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 10px 0 2px;
+            scrollbar-width: none;
+        }
+        .thumb-row::-webkit-scrollbar { display: none; }
+        .thumb-row .thumb { width: 64px; height: 64px; flex: 0 0 auto; aspect-ratio: auto; }
+        .thumb-add {
+            display: grid;
+            place-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            font-size: 22px;
+            line-height: 1;
+            color: var(--accent);
+            background: rgba(34, 211, 238, .06);
+            border: 1px dashed rgba(34, 211, 238, .38);
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .thumb-add:hover { background: rgba(34, 211, 238, .12); }
+
+        .type-list { display: flex; flex-direction: column; gap: 8px; }
+        .type-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 14px 16px;
+            font-family: var(--font);
+            font-size: 14.5px;
+            font-weight: 500;
+            text-align: left;
+            color: var(--text);
+            background: linear-gradient(180deg, var(--surface-2), var(--surface));
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: border-color .18s, background .18s, transform .12s;
+        }
+        .type-btn:active { transform: scale(.99); }
+        .type-btn .num {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .1em;
+            color: var(--muted);
+        }
+        .type-btn .type-name { flex: 1; }
+        .type-btn.is-other { color: #fcd34d; border-color: rgba(251, 191, 36, .32); }
+
+        /* =================================================================
+           12. НИЖНЯЯ ПАНЕЛЬ
+           ================================================================= */
+        .bottom-bar {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            z-index: 35;
+            display: none;
+            justify-content: center;
+            padding: 10px 16px calc(10px + var(--safe-b));
+            background: linear-gradient(180deg, rgba(7, 10, 14, 0), rgba(7, 10, 14, .94) 42%);
+            border-top: 1px solid rgba(28, 40, 51, .8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        body[data-screen="inspection"] .bottom-bar { display: flex; }
+        .bottom-inner {
+            width: 100%;
+            max-width: 640px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .bb-meta { display: flex; flex-direction: column; flex: 0 0 auto; }
+        .bb-photos { font-family: var(--mono); font-size: 12px; color: var(--text); }
+        .bb-size { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+        .bottom-inner .btn { flex: 1; }
+
+        /* =================================================================
+           13. ШТОРКИ (модальные окна снизу)
+           ================================================================= */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            /* выше камеры (150): подтверждения должны быть видны поверх превью */
+            z-index: 200;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 0;
+            background: rgba(3, 6, 9, .68);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .overlay.open { display: flex; animation: fadeIn .18s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .sheet {
+            width: 100%;
+            max-width: 560px;
+            max-height: 92dvh;
+            overflow-y: auto;
+            padding: 18px 18px calc(20px + var(--safe-b));
+            background: linear-gradient(180deg, #111a22, #0c1319);
+            border: 1px solid var(--line-2);
+            border-bottom: none;
+            border-radius: 20px 20px 0 0;
+            animation: sheetUp .26s cubic-bezier(.2, .8, .25, 1);
+        }
+        @keyframes sheetUp {
+            from { transform: translateY(28px); opacity: .5; }
+            to   { transform: none; opacity: 1; }
+        }
+        .grabber {
+            width: 38px; height: 4px;
+            margin: 0 auto 16px;
+            border-radius: 2px;
+            background: #2a3947;
+        }
+        .sheet-title { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
+        .sheet-sub { margin: 0 0 16px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+        .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+        .sheet-actions .btn + .btn { margin-top: 0; }
+        .sheet .field-group + .field-group { margin-top: 14px; }
+
+        /* =================================================================
+           14. ТОСТЫ
+           ================================================================= */
+        .toasts {
+            position: fixed;
+            left: 50%;
+            bottom: calc(96px + var(--safe-b));
+            z-index: 240;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: min(92vw, 480px);
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+        /* Шторка или камера занимают низ экрана — уводим тосты наверх,
+           чтобы они не перекрывали поля ввода и затвор. */
+        body.sheet-open .toasts,
+        body.camera-open .toasts {
+            top: calc(74px + var(--safe-t));
+            bottom: auto;
+        }
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            font-size: 13.5px;
+            line-height: 1.4;
+            color: var(--text);
+            background: rgba(14, 21, 28, .97);
+            border: 1px solid var(--line-2);
+            border-left: 3px solid var(--accent);
+            border-radius: 12px;
+            box-shadow: 0 22px 44px -24px #000;
+            animation: toastIn .22s ease;
+        }
+        .toast.ok   { border-left-color: var(--lime); }
+        .toast.warn { border-left-color: var(--amber); }
+        .toast.err  { border-left-color: var(--danger); }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+
+        /* =================================================================
+           15. КАМЕРА
+           ================================================================= */
+        .camera {
+            position: fixed;
+            inset: 0;
+            z-index: 150;
+            display: none;
+            flex-direction: column;
+            background: #000;
+        }
+        .camera.open { display: flex; }
+        #cam-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+        }
+        /* Вспышка при снимке */
+        .camera::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            background: #fff;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .camera.flash::before { animation: shutterFlash .18s ease-out; }
+        @keyframes shutterFlash {
+            0%   { opacity: .85; }
+            100% { opacity: 0; }
+        }
+        .cam-top {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: calc(10px + var(--safe-t)) 14px 10px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, .72), transparent);
+        }
+        .cam-ico {
+            width: 44px; height: 44px;
+            display: grid; place-items: center;
+            color: #fff;
+            background: rgba(10, 15, 20, .6);
+            border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 50%;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+        .cam-ico svg { width: 19px; height: 19px; }
+        .cam-ico.is-on { color: var(--amber); border-color: rgba(251, 191, 36, .6); }
+        .cam-counter {
+            font-family: var(--mono);
+            font-size: 12px;
+            letter-spacing: .08em;
+            color: #d8f6fb;
+            padding: 7px 13px;
+            background: rgba(10, 15, 20, .55);
+            border: 1px solid rgba(255, 255, 255, .13);
+            border-radius: 999px;
+        }
+        .cam-counter small { color: rgba(216, 246, 251, .65); font-size: 10px; }
+        .cam-tools { display: flex; gap: 8px; }
+
+        .cam-fallback {
+            position: relative;
+            z-index: 3;
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 24px;
+            text-align: center;
+            background: radial-gradient(620px 420px at 50% 32%, rgba(34, 211, 238, .08), transparent 70%), #06090d;
+        }
+        .cam-fallback .fb-icon {
+            width: 62px; height: 62px;
+            display: grid; place-items: center;
+            margin-bottom: 4px;
+            color: var(--amber);
+            background: rgba(251, 191, 36, .07);
+            border: 1px solid rgba(251, 191, 36, .3);
+            border-radius: 18px;
+        }
+        .cam-fallback h3 { margin: 0; font-size: 17px; }
+        .cam-fallback p {
+            margin: 0 0 8px;
+            max-width: 34ch;
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-2);
+        }
+        .cam-fallback .btn { width: min(320px, 100%); }
+        .cam-debug {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            line-height: 1.5;
+            letter-spacing: .04em;
+            color: rgba(220, 240, 250, .34);
+            margin: 2px 0 6px;
+            max-width: 34ch;
+        }
+        .camera[data-mode="native"] .cam-fallback { display: flex; }
+        .camera[data-mode="native"] .cam-controls { display: none; }
+        /* Подтверждение кадра: счётчик коротко «подпрыгивает» */
+        .cam-counter.saved { animation: counterPop .34s ease; }
+        @keyframes counterPop {
+            0%   { transform: scale(1); }
+            45%  { transform: scale(1.14); border-color: rgba(163, 230, 53, .8); color: #d9f99d; }
+            100% { transform: scale(1); }
+        }
+
+        .cam-bottom {
+            position: relative;
+            z-index: 3;
+            margin-top: auto;
+            padding: 10px 14px calc(14px + var(--safe-b));
+            background: linear-gradient(0deg, rgba(0, 0, 0, .9), rgba(0, 0, 0, .18) 62%, transparent);
+        }
+        .cam-strip {
+            display: flex;
+            gap: 8px;
+            min-height: 58px;
+            overflow-x: auto;
+            padding: 4px 0 10px;
+            scrollbar-width: none;
+        }
+        .cam-strip::-webkit-scrollbar { display: none; }
+        .cam-strip .thumb {
+            width: 58px; height: 58px;
+            flex: 0 0 auto;
+            aspect-ratio: auto;
+            border-radius: 8px;
+        }
+        .cam-strip .thumb .thumb-del { width: 20px; height: 20px; font-size: 12px; top: 3px; right: 3px; }
+        .cam-strip .strip-empty {
+            align-self: center;
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: rgba(220, 240, 250, .4);
+        }
+        .cam-controls { display: flex; justify-content: center; }
+        .cam-shutter {
+            width: 78px; height: 78px;
+            display: grid; place-items: center;
+            padding: 0;
+            background: rgba(255, 255, 255, .12);
+            border: 3px solid rgba(255, 255, 255, .85);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .cam-shutter span {
+            width: 60px; height: 60px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .1s;
+        }
+        .cam-shutter:active span { transform: scale(.9); }
+        .cam-hint {
+            margin: 0;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: rgba(220, 240, 250, .55);
+        }
+        .cam-hint-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .cam-link {
+            padding: 4px 2px;
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: rgba(34, 211, 238, .9);
+            background: none;
+            border: none;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            cursor: pointer;
+        }
+        .camera[data-mode="native"] .cam-hint-row { display: none; }
+        .camera[data-mode="native"] #cam-switch { display: none; }
+
+        /* =================================================================
+           16. ПРОСМОТР ФОТО
+           ================================================================= */
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            z-index: 160;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(0, 0, 0, .94);
+        }
+        .lightbox.open { display: flex; animation: fadeIn .16s ease; }
+        .lightbox img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 0 60px -20px rgba(34, 211, 238, .5);
+        }
+        .lightbox .lb-close {
+            position: absolute;
+            top: calc(12px + var(--safe-t));
+            right: 12px;
+            width: 44px; height: 44px;
+        }
+
+        /* =================================================================
+           17. ЗАНЯТОСТЬ (сборка архива, обработка фото)
+           ================================================================= */
+        .busy {
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 24px;
+            text-align: center;
+            background: rgba(4, 7, 10, .86);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .busy p { margin: 0; font-size: 14px; }
+        .busy .busy-pct {
+            font-family: var(--mono);
+            font-size: 12px;
+            letter-spacing: .1em;
+            color: var(--accent);
+        }
+        .spinner {
+            width: 44px; height: 44px;
+            border: 3px solid rgba(34, 211, 238, .18);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin .9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .progress {
+            width: min(280px, 80vw);
+            height: 4px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, .08);
+            border-radius: 2px;
+        }
+        .progress span {
+            display: block;
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--accent-2), var(--accent));
+            transition: width .2s;
+        }
+
+        /* =================================================================
+           18. ФИНАЛЬНЫЙ ЭКРАН
+           ================================================================= */
+        .done-mark {
+            width: 78px; height: 78px;
+            margin: 20px auto 16px;
+            display: grid; place-items: center;
+            color: var(--lime);
+            background: radial-gradient(circle at 50% 40%, rgba(163, 230, 53, .24), rgba(163, 230, 53, .04));
+            border: 1px solid rgba(163, 230, 53, .4);
+            border-radius: 50%;
+            box-shadow: 0 0 46px -12px rgba(163, 230, 53, .6);
+        }
+        .done-mark svg { width: 32px; height: 32px; }
+        .done-title { margin: 0 0 6px; font-size: 24px; text-align: center; }
+        #screen-done .screen-sub { text-align: center; }
+        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+        .stat b { display: block; font-family: var(--mono); font-size: 21px; color: var(--accent); }
+        .stat span {
+            font-family: var(--mono);
+            font-size: 9px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        /* =================================================================
+           19. АДАПТИВ И ДОСТУПНОСТЬ
+           ================================================================= */
+        @media (min-width: 620px) {
+            .overlay { align-items: center; padding: 24px; }
+            .sheet {
+                padding: 22px 22px 24px;
+                border-bottom: 1px solid var(--line-2);
+                border-radius: 20px;
+                max-width: 460px;
+            }
+            .grabber { display: none; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .01ms !important;
+            }
+        }
+
+        :focus-visible {
+            outline: 2px solid rgba(34, 211, 238, .75);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+
+<body data-screen="start">
+
+<!-- =====================================================================
+     SVG-СПРАЙТ ИКОНОК
+     ===================================================================== -->
+<svg class="svg-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-bolt" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M13 2 4.09 13.11A1 1 0 0 0 4.86 14.75H10l-1 7 8.91-11.11a1 1 0 0 0-.77-1.64H13l1-7Z"/>
+    </symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14.5 4h-5L8 6.5H4.5A1.5 1.5 0 0 0 3 8v10.5A1.5 1.5 0 0 0 4.5 20h15a1.5 1.5 0 0 0 1.5-1.5V8a1.5 1.5 0 0 0-1.5-1.5H16L14.5 4Z"/>
+        <circle cx="12" cy="13" r="3.5"/>
+    </symbol>
+    <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="2.5"/>
+        <circle cx="8.5" cy="9.5" r="1.6"/>
+        <path d="m3.5 17.5 4.7-4.6a1.6 1.6 0 0 1 2.2 0l2.4 2.3 1.9-1.8a1.6 1.6 0 0 1 2.2 0l3.6 3.5"/>
+    </symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.3 3.9 2.5 17.5A1.8 1.8 0 0 0 4.1 20.2h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.94 1.94 0 0 0-3.4 0Z"/>
+        <path d="M12 9v4"/><path d="M12 16.5h.01"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.5 6.5h17M9.5 6.5V4.8A1.3 1.3 0 0 1 10.8 3.5h2.4a1.3 1.3 0 0 1 1.3 1.3v1.7"/>
+        <path d="M5.8 6.5 6.7 19a1.7 1.7 0 0 0 1.7 1.6h7.2a1.7 1.7 0 0 0 1.7-1.6l.9-12.5"/>
+        <path d="M10.5 10.5v6M13.5 10.5v6"/>
+    </symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 20h4L20 8a2.1 2.1 0 0 0 0-3l-1-1a2.1 2.1 0 0 0-3 0L4 16v4Z"/>
+        <path d="m15 6 3 3"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m4.5 12.5 5 5 10-11"/>
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M6 6l12 12M18 6 6 18"/>
+    </symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M11 18l-6-6 6-6"/>
+    </symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3.5v11.5"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/>
+        <path d="M4 17.5v1.7A1.8 1.8 0 0 0 5.8 21h12.4a1.8 1.8 0 0 0 1.8-1.8v-1.7"/>
+    </symbol>
+    <symbol id="i-flash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2 4.09 13.11A1 1 0 0 0 4.86 14.75H10l-1 7 8.91-11.11a1 1 0 0 0-.77-1.64H13l1-7Z"/>
+    </symbol>
+    <symbol id="i-switch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 11a8 8 0 0 0-14.6-4.6L3 9"/>
+        <path d="M4 13a8 8 0 0 0 14.6 4.6L21 15"/>
+        <path d="M3 4v5h5M21 20v-5h-5"/>
+    </symbol>
+    <symbol id="i-room" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 21V4.5A1.5 1.5 0 0 1 5.5 3h10A1.5 1.5 0 0 1 17 4.5V21"/>
+        <path d="M3 21h18"/><path d="M14.5 12h.01"/><path d="M20 21V9"/>
+    </symbol>
+    <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2.5H7.5A1.5 1.5 0 0 0 6 4v16a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 20V6.5L14 2.5Z"/>
+        <path d="M14 2.5V7h4"/><path d="M9.5 12.5h5M9.5 16h5"/>
+    </symbol>
+</svg>
+
+<!-- =====================================================================
+     ВЕРХНЯЯ ПАНЕЛЬ
+     ===================================================================== -->
+<header class="topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            <span class="brand-mark">
+                <svg class="ico" width="18" height="18"><use href="#i-bolt"/></svg>
+            </span>
+            <div>
+                <div class="brand-title">Электроосмотр</div>
+                <div class="brand-sub">VO 1.0 · полевой терминал</div>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <span class="save-state" id="save-state">готов</span>
+            <span class="led" id="net-led" title="Состояние"></span>
+        </div>
+    </div>
+</header>
+
+<main class="app">
+
+    <nav class="steps" id="steps" aria-label="Этапы">
+        <div class="step" data-i="0"><span>01</span>Параметры</div>
+        <div class="step" data-i="1"><span>02</span>Осмотр</div>
+        <div class="step" data-i="2"><span>03</span>Отчёт</div>
+    </nav>
+
+    <!-- =================================================================
+         ЭКРАН 1: СТАРТ
+         ================================================================= -->
+    <section class="screen active" id="screen-start">
+        <div class="hero">
+            <div class="hero-mark">
+                <svg class="ico" width="36" height="36"><use href="#i-bolt"/></svg>
+            </div>
+            <p class="label">Полевой терминал</p>
+            <h1 class="hero-title">Электро<br><span>осмотр</span></h1>
+            <p class="hero-text">Фотофиксация помещений и дефектов кабельных трасс. Каждый кадр сохраняется на устройстве сразу.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <span class="label">Проверка системы</span>
+            </div>
+            <ul class="check-list">
+                <li>
+                    <span class="led" id="chk-camera"></span>
+                    <div>
+                        <b>Камера</b>
+                        <small id="chk-camera-note">проверка…</small>
+                    </div>
+                </li>
+                <li>
+                    <span class="led" id="chk-store"></span>
+                    <div>
+                        <b>Хранилище</b>
+                        <small id="chk-store-note">проверка…</small>
+                    </div>
+                </li>
+                <li>
+                    <span class="led" id="chk-libs"></span>
+                    <div>
+                        <b>Экспорт отчёта</b>
+                        <small id="chk-libs-note">проверка…</small>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" id="btn-start">
+            <svg><use href="#i-bolt"/></svg> Начать осмотр
+        </button>
+
+        <div class="card install-card" id="install-card" hidden>
+            <div class="card-head">
+                <span class="label">Установка</span>
+            </div>
+            <p class="install-text">Добавьте приложение на главный экран: запуск без адресной строки и работа без интернета.</p>
+            <button class="btn btn-primary btn-block" id="btn-install">
+                <svg><use href="#i-download"/></svg> Установить приложение
+            </button>
+            <p class="install-hint" id="install-hint" hidden></p>
+        </div>
+
+        <p class="footnote">Данные не покидают устройство</p>
+    </section>
+
+    <!-- =================================================================
+         ЭКРАН 2: ПАРАМЕТРЫ
+         ================================================================= -->
+    <section class="screen" id="screen-params">
+        <h2 class="screen-title">Параметры осмотра</h2>
+        <p class="screen-sub">Эти данные попадут в отчёт и в имя файла.</p>
+
+        <div class="card">
+            <div class="field-group">
+                <label class="label" for="input-date">Дата осмотра</label>
+                <input class="field" type="date" id="input-date">
+            </div>
+
+            <div class="field-group">
+                <label class="label" for="select-object">Объект</label>
+                <select class="field" id="select-object">
+                    <option value="" disabled selected>Выберите объект</option>
+                    <option value="0">Северное Тушино (Сборно-разборные конструкции в стиле "Крым")</option>
+                    <option value="1">ул. Бориса Пастернака (Сборно-разборные конструкции в стиле "Крым")</option>
+                    <option value="2">Царицыно (Сборно-разборные конструкции в стиле "Царицынский")</option>
+                    <option value="3">Коломенское (Фестивально-ярмарочная площадки Коломенское)</option>
+                    <option value="other">Другое</option>
+                </select>
+            </div>
+
+            <div class="field-group" id="object-details" hidden>
+                <div id="detail-select-wrapper">
+                    <label class="label" for="select-object-detail">Элемент объекта</label>
+                    <select class="field" id="select-object-detail">
+                        <option value="" disabled selected>Выберите элемент</option>
+                    </select>
+                </div>
+                <div id="detail-other-input" hidden>
+                    <label class="label" for="input-detail-custom">Свой элемент объекта</label>
+                    <input class="field" type="text" id="input-detail-custom" placeholder="Например: Щит освещения" autocomplete="off">
+                </div>
+                <div id="object-text-input" hidden>
+                    <label class="label" for="input-object-custom">Название объекта</label>
+                    <input class="field" type="text" id="input-object-custom" placeholder="Например: Парк Сокольники" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label class="label" for="select-contractor">Подрядчик</label>
+                <select class="field" id="select-contractor">
+                    <option value="" disabled selected>Выберите подрядчика</option>
+                    <option value="0">ООО "Город Мастеров"</option>
+                    <option value="1">ООО "Ухоженный сад"</option>
+                    <option value="other">Другое</option>
+                </select>
+            </div>
+
+            <div class="field-group" id="contractor-text-input" hidden>
+                <label class="label" for="input-contractor-custom">Название подрядчика</label>
+                <input class="field" type="text" id="input-contractor-custom" placeholder="ООО «Название»" autocomplete="off">
+            </div>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" id="btn-start-inspection">Начать осмотр</button>
+        <button class="btn btn-ghost btn-block" id="btn-params-back">Назад</button>
+    </section>
+
+    <!-- =================================================================
+         ЭКРАН 3: ОСМОТР
+         ================================================================= -->
+    <section class="screen" id="screen-inspection">
+        <div class="object-card">
+            <div class="object-line">
+                <span class="label">Объект</span>
+                <span class="object-value" id="view-object">—</span>
+            </div>
+            <div class="chips">
+                <span class="chip"><span id="view-date">—</span></span>
+                <span class="chip"><span id="view-contractor">—</span></span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <span class="label">Помещение</span>
+                <div class="head-actions">
+                    <button class="icon-btn" id="btn-room-add" title="Добавить помещение" aria-label="Добавить помещение">
+                        <svg><use href="#i-plus"/></svg>
+                    </button>
+                    <button class="icon-btn" id="btn-room-rename" title="Переименовать помещение" aria-label="Переименовать помещение">
+                        <svg><use href="#i-pencil"/></svg>
+                    </button>
+                    <button class="icon-btn danger" id="btn-room-delete" title="Удалить помещение" aria-label="Удалить помещение">
+                        <svg><use href="#i-trash"/></svg>
+                    </button>
+                </div>
+            </div>
+            <select class="field" id="select-active-room" aria-label="Активное помещение"></select>
+            <div class="status-line">
+                <span class="led" id="room-led"></span>
+                <span id="room-note">—</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <span class="label">Фото помещения</span>
+                <span class="counter" id="photo-count">0</span>
+            </div>
+            <div class="thumbs" id="photo-grid"></div>
+            <div class="split">
+                <button class="btn btn-primary" id="btn-shot">
+                    <svg><use href="#i-camera"/></svg> Снимок
+                </button>
+                <button class="btn btn-ghost" id="btn-gallery">
+                    <svg><use href="#i-image"/></svg> Галерея
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <span class="label">Дефекты</span>
+                <span class="counter counter-danger" id="defect-count">0</span>
+            </div>
+            <div class="defect-list" id="defect-list"></div>
+            <button class="btn btn-warn btn-block" id="btn-add-defect">
+                <svg><use href="#i-alert"/></svg> Добавить дефект
+            </button>
+        </div>
+
+        <button class="btn btn-ghost btn-block" id="btn-edit-params">Параметры осмотра</button>
+    </section>
+
+    <!-- =================================================================
+         ЭКРАН 4: ВИД РАБОТ
+         ================================================================= -->
+    <section class="screen" id="screen-defect">
+        <div class="screen-head">
+            <button class="icon-btn" id="btn-defect-back" title="Назад" aria-label="Назад к осмотру">
+                <svg><use href="#i-arrow-left"/></svg>
+            </button>
+            <div>
+                <h2 class="screen-title">Вид работ</h2>
+                <p class="screen-sub">Помещение: <span id="defect-room-name">—</span></p>
+            </div>
+        </div>
+        <p class="hint">Выберите вид работ, опишите дефект — камера откроется сразу после.</p>
+        <div class="type-list" id="defect-type-list"></div>
+    </section>
+
+    <!-- =================================================================
+         ЭКРАН 5: ГОТОВО
+         ================================================================= -->
+    <section class="screen" id="screen-done">
+        <div class="done-mark">
+            <svg><use href="#i-check"/></svg>
+        </div>
+        <h2 class="done-title">Отчёт сформирован</h2>
+        <p class="screen-sub">Архив скачан в загрузки устройства.</p>
+
+        <div class="card stat-grid" id="done-stats"></div>
+
+        <p class="hint">Черновик осмотра сохранён на устройстве. Кнопка «Новый осмотр» очистит его.</p>
+        <button class="btn btn-primary btn-block btn-lg" id="btn-new-inspection">Новый осмотр</button>
+        <button class="btn btn-ghost btn-block" id="btn-back-to-inspection">Вернуться к осмотру</button>
+    </section>
+
+</main>
+
+<!-- =====================================================================
+     НИЖНЯЯ ПАНЕЛЬ ОСМОТРА
+     ===================================================================== -->
+<div class="bottom-bar">
+    <div class="bottom-inner">
+        <div class="bb-meta">
+            <span class="bb-photos" id="bb-photos">0 фото</span>
+            <span class="bb-size" id="bb-size">0,0 МБ</span>
+        </div>
+        <button class="btn btn-primary" id="btn-export">
+            <svg><use href="#i-download"/></svg> Выгрузить отчёт
+        </button>
+    </div>
+</div>
+
+<!-- =====================================================================
+     ШТОРКА: ПОМЕЩЕНИЕ (добавление / переименование)
+     ===================================================================== -->
+<div class="overlay" id="sheet-room">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-room-title">
+        <div class="grabber"></div>
+        <h3 class="sheet-title" id="sheet-room-title">Помещение</h3>
+        <p class="sheet-sub" id="sheet-room-sub">Название используется в отчёте и в именах папок.</p>
+        <div class="field-group">
+            <label class="label" for="room-name-input">Название помещения</label>
+            <input class="field" type="text" id="room-name-input" placeholder="Например: Щитовая №2" maxlength="60" autocomplete="off">
+        </div>
+        <div class="sheet-actions">
+            <button class="btn btn-ghost" id="room-cancel">Отмена</button>
+            <button class="btn btn-primary" id="room-ok">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================================
+     ШТОРКА: ОПИСАНИЕ ДЕФЕКТА
+     ===================================================================== -->
+<div class="overlay" id="sheet-defect">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-defect-title">
+        <div class="grabber"></div>
+        <h3 class="sheet-title" id="sheet-defect-title">Описание дефекта</h3>
+        <p class="sheet-sub" id="sheet-defect-sub">Вид работ</p>
+        <div class="field-group">
+            <label class="label" for="defect-desc-input">Что не так</label>
+            <textarea class="field field--area" id="defect-desc-input" rows="4" placeholder="Например: крепление кабеля отсутствует на участке 3 метра" maxlength="500"></textarea>
+        </div>
+        <div class="sheet-actions">
+            <button class="btn btn-ghost" id="defect-cancel">Отмена</button>
+            <button class="btn btn-primary" id="defect-ok">Далее</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================================
+     ШТОРКА: «ДРУГОЕ» — СВОЙ ВИД РАБОТ
+     ===================================================================== -->
+<div class="overlay" id="sheet-other">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-other-title">
+        <div class="grabber"></div>
+        <h3 class="sheet-title" id="sheet-other-title">Свой вид работ</h3>
+        <p class="sheet-sub">Название станет заголовком группы в отчёте.</p>
+        <div class="field-group">
+            <label class="label" for="other-name-input">Название вида работ</label>
+            <input class="field" type="text" id="other-name-input" placeholder="Например: Проверка щитка" maxlength="80" autocomplete="off">
+        </div>
+        <div class="field-group">
+            <label class="label" for="other-desc-input">Описание дефекта</label>
+            <textarea class="field field--area" id="other-desc-input" rows="3" placeholder="Опишите дефект" maxlength="500"></textarea>
+        </div>
+        <div class="sheet-actions">
+            <button class="btn btn-ghost" id="other-cancel">Отмена</button>
+            <button class="btn btn-primary" id="other-ok">Далее</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================================
+     ШТОРКА: ПОДТВЕРЖДЕНИЕ ВЫГРУЗКИ
+     ===================================================================== -->
+<div class="overlay" id="sheet-export">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-export-title">
+        <div class="grabber"></div>
+        <h3 class="sheet-title" id="sheet-export-title">Сформировать отчёт?</h3>
+        <p class="sheet-sub" id="sheet-export-summary">—</p>
+        <div class="sheet-actions">
+            <button class="btn btn-ghost" id="export-cancel">Отмена</button>
+            <button class="btn btn-primary" id="export-ok">Сформировать</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================================
+     ШТОРКА: ОБЩЕЕ ПОДТВЕРЖДЕНИЕ
+     ===================================================================== -->
+<div class="overlay" id="sheet-confirm">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div class="grabber"></div>
+        <h3 class="sheet-title" id="confirm-title">Подтвердите действие</h3>
+        <p class="sheet-sub" id="confirm-text">—</p>
+        <div class="sheet-actions">
+            <button class="btn btn-ghost" id="confirm-cancel">Отмена</button>
+            <button class="btn btn-primary" id="confirm-ok">Да</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================================
+     ШТОРКА: ВОССТАНОВЛЕНИЕ ЧЕРНОВИКА
+     ===================================================================== -->
+<div class="overlay" id="sheet-restore">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="restore-title">
+        <div class="grabber"></div>
+        <h3 class="sheet-title" id="restore-title">Найден черновик</h3>
+        <p class="sheet-sub" id="restore-text">—</p>
+        <div class="sheet-actions">
+            <button class="btn btn-ghost" id="restore-discard">Удалить</button>
+            <button class="btn btn-primary" id="restore-open">Восстановить</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================================
+     КАМЕРА (во весь экран)
+     ===================================================================== -->
+<div class="camera" id="camera" data-mode="live" aria-hidden="true">
+    <video id="cam-video" playsinline muted autoplay></video>
+
+    <div class="cam-top">
+        <button class="cam-ico" id="cam-close" aria-label="Закрыть камеру">
+            <svg><use href="#i-x"/></svg>
+        </button>
+        <div class="cam-counter"><span id="cam-count">0</span> <small id="cam-count-word">кадров</small></div>
+        <div class="cam-tools">
+            <button class="cam-ico" id="cam-torch" aria-label="Вспышка" hidden>
+                <svg><use href="#i-flash"/></svg>
+            </button>
+            <button class="cam-ico" id="cam-switch" aria-label="Сменить камеру">
+                <svg><use href="#i-switch"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="cam-fallback" id="cam-fallback">
+        <div class="fb-icon"><svg width="26" height="26"><use href="#i-camera"/></svg></div>
+        <h3>Живое превью недоступно</h3>
+        <p id="cam-reason">Браузер не дал доступ к камере. Снимки можно делать системной камерой — они сразу сохраняются в осмотр.</p>
+        <p class="cam-debug" id="cam-debug"></p>
+        <button class="btn btn-primary" id="cam-native">Открыть системную камеру</button>
+        <button class="btn btn-ghost" id="cam-gallery">Выбрать из галереи</button>
+    </div>
+
+    <div class="cam-bottom">
+        <div class="cam-strip" id="cam-strip"></div>
+        <div class="cam-controls">
+            <button class="cam-shutter" id="cam-shutter" aria-label="Сделать снимок"><span></span></button>
+        </div>
+        <div class="cam-hint-row">
+            <p class="cam-hint" id="cam-hint">Снимайте сколько нужно — кадры сохраняются сразу</p>
+            <button class="cam-link" id="cam-native-link" type="button">Системная камера</button>
+            <button class="cam-link" id="cam-gallery-link" type="button">Галерея</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================================
+     ПРОСМОТР ФОТО
+     ===================================================================== -->
+<div class="lightbox" id="lightbox" aria-hidden="true">
+    <button class="cam-ico lb-close" id="lightbox-close" aria-label="Закрыть">
+        <svg><use href="#i-x"/></svg>
+    </button>
+    <img id="lightbox-img" alt="Просмотр фотографии">
+</div>
+
+<!-- =====================================================================
+     ИНДИКАТОР ЗАНЯТОСТИ
+     ===================================================================== -->
+<div class="busy" id="busy" hidden>
+    <div class="spinner"></div>
+    <p id="busy-text">Обработка…</p>
+    <div class="progress" id="busy-progress" hidden><span></span></div>
+    <p class="busy-pct" id="busy-pct"></p>
+</div>
+
+<!-- =====================================================================
+     ТОСТЫ
+     ===================================================================== -->
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<!-- =====================================================================
+     СКРЫТЫЕ INPUT ДЛЯ СИСТЕМНОЙ КАМЕРЫ И ГАЛЕРЕИ
+     ===================================================================== -->
+<input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="input-gallery" accept="image/*" multiple style="display:none">
+
+<!-- Библиотеки ZIP/XLSX подгружаются из папки vendor (если положить рядом),
+     иначе с резервных CDN — см. ensureLibs() в скрипте. -->
+
+<script>
+    'use strict';
+
+    /* =================================================================
+       ЛОГИКА ПРИЛОЖЕНИЯ
+       ================================================================= */
+    /* =================================================================
+       1. СПРАВОЧНИКИ
+       Порядок видов работ в Excel сохранён один-в-один с версией 0.0.
+       ================================================================= */
+    const OBJECT_DETAILS = [
+        ['Культурно-досуговый центр (Северное Тушино)', 'Фестивальная площадка (Северное Тушино)', 'Система наружного электроосвещения (Северное Тушино)'],
+        ['Культурно-досуговый центр (ул. Бориса Пастернака)', 'Фестивальная площадка (ул. Бориса Пастернака)', 'Временный прокат (ул. Бориса Пастернака)'],
+        ['Прокат (Царицыно)'],
+        ['Торговые павильоны (Коломенское)']
+    ];
+
+    const DEFECT_TYPES = [
+        'Крепление кабеля',
+        'Выбор марки кабеля',
+        'Радиусы изгиба',
+        'Способ прокладки кабеля',
+        'Защита кабеля от механических повреждений',
+        'Вертикальность/горизонтальность трасс',
+        'Вывод кабеля наружу (фасадное освещение)',
+        'Другое'
+    ];
+
+    const EXCEL_ORDER = [
+        'Выбор марки кабеля',
+        'Способ прокладки кабеля',
+        'Крепление кабеля',
+        'Радиусы изгиба',
+        'Вертикальность/горизонтальность трасс',
+        'Защита кабеля от механических повреждений',
+        'Вывод кабеля наружу (фасадное освещение)'
+    ];
+
+    /* Ограничения обработки изображений: 2000 px по длинной стороне
+       достаточно для отчёта и не переполняет память телефона. */
+    const MAX_SIDE = 2000;
+    const THUMB_SIDE = 300;
+    const JPEG_QUALITY = 0.86;
+
+    /* Хранилище черновика */
+    const DB_NAME = 'vo_inspect';
+    const DB_VER = 1;
+    const DB_STORE = 'drafts';
+    const DRAFT_KEY = 'current';
+
+    /* =================================================================
+       2. СОСТОЯНИЕ
+       ================================================================= */
+    const state = {
+        date: '',
+        objectBase: '',
+        objectDetail: '',
+        objectLabel: '',
+        contractor: '',
+        rooms: [],          // [{ id, name, photos: [Photo], defects: [{ id, type, description, photos }] }]
+        activeRoomId: null,
+        started: false
+    };
+
+    let currentScreen = 'start';
+    let pendingDraft = null;
+    let roomSheetMode = 'rename';
+    let exporting = false;
+
+    const SCREENS = ['start', 'params', 'inspection', 'defect', 'done'];
+    const STEP_BY_SCREEN = { params: 0, inspection: 1, defect: 1, done: 2 };
+
+    /* =================================================================
+       3. МИКРОУТИЛИТЫ
+       ================================================================= */
+    function $(selector, root) {
+        return (root || document).querySelector(selector);
+    }
+
+    function $$(selector, root) {
+        return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+    }
+
+    function uid() {
+        try {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID();
+            }
+        } catch (err) { /* randomUUID недоступен — используем запасной вариант */ }
+        return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    }
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
+    function formatBytes(bytes) {
+        const value = Number(bytes) || 0;
+        if (value <= 0) return '0,0 МБ';
+        const mb = value / (1024 * 1024);
+        if (mb < 0.1) return '0,1 МБ';
+        return mb.toFixed(1).replace('.', ',') + ' МБ';
+    }
+
+    function formatDateRu(iso) {
+        const text = String(iso || '');
+        const parts = text.split('-');
+        if (parts.length === 3 && parts[0].length === 4) {
+            return parts[2] + '.' + parts[1] + '.' + parts[0];
+        }
+        const d = new Date(text);
+        return isNaN(d.getTime()) ? (text || '—') : d.toLocaleDateString('ru-RU');
+    }
+
+    function plural(n, one, few, many) {
+        const abs = Math.abs(Number(n) || 0) % 100;
+        const last = abs % 10;
+        if (abs > 10 && abs < 20) return many;
+        if (last > 1 && last < 5) return few;
+        if (last === 1) return one;
+        return many;
+    }
+
+    /* Имя для папки/файла внутри ZIP: без запрещённых в Windows символов.
+       Для обычных названий результат совпадает с версией 0.0. */
+    function safeZipName(value, fallback) {
+        let name = String(value == null ? '' : value)
+            .replace(/[\u0000-\u001f\u007f]/g, ' ')
+            .replace(/[\\/:*?"<>|]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/[. ]+$/, '');
+        if (!name) name = fallback || 'Без названия';
+        if (name.length > 80) name = name.slice(0, 80).trim();
+        return name;
+    }
+
+    /* =================================================================
+       4. ТОСТЫ, ШТОРКИ, ПОДТВЕРЖДЕНИЯ, ИНДИКАТОР ЗАНЯТОСТИ
+       ================================================================= */
+    function toast(message, kind, ms) {
+        const box = $('#toasts');
+        if (!box || !message) return;
+        const el = document.createElement('div');
+        el.className = 'toast' + (kind ? ' ' + kind : '');
+        el.setAttribute('role', 'status');
+        el.textContent = message;
+        box.appendChild(el);
+        while (box.children.length > 4) box.firstElementChild.remove();
+        setTimeout(function () {
+            el.style.transition = 'opacity .25s, transform .25s';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-8px)';
+            setTimeout(function () { el.remove(); }, 260);
+        }, ms || 3200);
+    }
+
+    function syncScrollLock() {
+        const sheetOpen = $$('.overlay.open').length > 0;
+        const cameraOpen = $('#camera').classList.contains('open');
+        const locked = sheetOpen || cameraOpen || $('#lightbox').classList.contains('open');
+        document.body.classList.toggle('no-scroll', locked);
+        document.body.classList.toggle('sheet-open', sheetOpen);
+        document.body.classList.toggle('camera-open', cameraOpen);
+    }
+
+    function openSheet(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.add('open');
+        syncScrollLock();
+    }
+
+    function closeSheet(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('open');
+        syncScrollLock();
+    }
+
+    function closeAllSheets() {
+        $$('.overlay.open').forEach(function (el) { el.classList.remove('open'); });
+        syncScrollLock();
+    }
+
+    let confirmResolver = null;
+
+    function uiConfirm(options) {
+        const opts = options || {};
+        return new Promise(function (resolve) {
+            $('#confirm-title').textContent = opts.title || 'Подтвердите действие';
+            $('#confirm-text').textContent = opts.message || '';
+            const okBtn = $('#confirm-ok');
+            okBtn.textContent = opts.okText || 'Да';
+            okBtn.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+            $('#confirm-cancel').textContent = opts.cancelText || 'Отмена';
+            confirmResolver = resolve;
+            openSheet('sheet-confirm');
+        });
+    }
+
+    function resolveConfirm(value) {
+        closeSheet('sheet-confirm');
+        if (confirmResolver) {
+            const resolve = confirmResolver;
+            confirmResolver = null;
+            resolve(value);
+        }
+    }
+
+    function showBusy(text, withProgress) {
+        $('#busy-text').textContent = text || 'Обработка…';
+        $('#busy-progress').hidden = !withProgress;
+        $('#busy-pct').textContent = '';
+        $('#busy').hidden = false;
+    }
+
+    function setBusyProgress(percent) {
+        const pct = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+        const bar = $('#busy-progress span');
+        if (bar) bar.style.width = pct + '%';
+        $('#busy-pct').textContent = pct > 0 ? pct + '%' : '';
+    }
+
+    function hideBusy() {
+        $('#busy').hidden = true;
+    }
+
+    function setLed(selector, kind) {
+        const el = $(selector);
+        if (!el) return;
+        el.classList.remove('warn', 'err', 'off');
+        if (kind === 'warn') el.classList.add('warn');
+        if (kind === 'err') el.classList.add('err');
+        if (kind === 'off') el.classList.add('off');
+    }
+
+    /* =================================================================
+       5. ХРАНИЛИЩЕ ЧЕРНОВИКА (IndexedDB)
+       Все фото лежат в IndexedDB как Blob — осмотр переживает
+       перезагрузку страницы и возврат из системной камеры.
+       ================================================================= */
+    const Store = {
+        db: null,
+        failed: false,
+        warned: false,
+
+        open: function () {
+            const self = this;
+            if (self.db) return Promise.resolve(self.db);
+            if (self.failed) return Promise.reject(new Error('IndexedDB недоступен'));
+            if (!('indexedDB' in window) || !window.indexedDB) {
+                self.failed = true;
+                return Promise.reject(new Error('IndexedDB не поддерживается'));
+            }
+            return new Promise(function (resolve, reject) {
+                let request;
+                try {
+                    request = window.indexedDB.open(DB_NAME, DB_VER);
+                } catch (err) {
+                    self.failed = true;
+                    reject(err);
+                    return;
+                }
+                request.onupgradeneeded = function () {
+                    const db = request.result;
+                    if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
+                };
+                request.onsuccess = function () { resolve(request.result); };
+                request.onerror = function () {
+                    self.failed = true;
+                    reject(request.error || new Error('Не удалось открыть хранилище'));
+                };
+                request.onblocked = function () {
+                    reject(new Error('Хранилище занято другой вкладкой'));
+                };
+            }).then(function (db) {
+                self.db = db;
+                return db;
+            }, function (err) {
+                self.failed = true;
+                throw err;
+            });
+        },
+
+        transaction: function (mode, action) {
+            const self = this;
+            return self.open().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    let tx;
+                    try {
+                        tx = db.transaction(DB_STORE, mode);
+                    } catch (err) {
+                        reject(err);
+                        return;
+                    }
+                    const store = tx.objectStore(DB_STORE);
+                    let request = null;
+                    try {
+                        request = action(store);
+                    } catch (err) {
+                        reject(err);
+                        return;
+                    }
+                    tx.oncomplete = function () { resolve(request ? request.result : undefined); };
+                    tx.onerror = function () { reject(tx.error || new Error('Ошибка чтения хранилища')); };
+                    tx.onabort = function () { reject(tx.error || new Error('Транзакция прервана')); };
+                });
+            });
+        },
+
+        get: function () {
+            return this.transaction('readonly', function (store) { return store.get(DRAFT_KEY); });
+        },
+
+        put: function (value) {
+            return this.transaction('readwrite', function (store) { return store.put(value, DRAFT_KEY); });
+        },
+
+        remove: function () {
+            return this.transaction('readwrite', function (store) { return store.delete(DRAFT_KEY); });
+        }
+    };
+
+    let saveTimer = null;
+    let saving = false;
+
+    function setSaveState(text) {
+        const el = $('#save-state');
+        if (el) el.textContent = text;
+    }
+
+    function scheduleSave() {
+        if (!state.started) return;
+        clearTimeout(saveTimer);
+        setSaveState('сохранение…');
+        saveTimer = setTimeout(function () { saveNow(); }, 700);
+    }
+
+    function saveNow() {
+        if (!state.started || saving) return;
+        saving = true;
+        Store.put({ v: 1, savedAt: Date.now(), data: snapshot() }).then(function () {
+            const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            setSaveState('сохранено ' + time);
+        }).catch(function (err) {
+            console.warn('Автосохранение недоступно:', err);
+            setSaveState('без сохранения');
+            if (!Store.warned) {
+                Store.warned = true;
+                toast('Браузер не даёт хранилище: черновик не сохранится', 'warn', 5000);
+            }
+        }).then(function () {
+            saving = false;
+        });
+    }
+
+    function snapshot() {
+        return {
+            v: 1,
+            savedAt: Date.now(),
+            date: state.date,
+            objectBase: state.objectBase,
+            objectDetail: state.objectDetail,
+            objectLabel: state.objectLabel,
+            contractor: state.contractor,
+            started: state.started,
+            activeRoomId: state.activeRoomId,
+            rooms: state.rooms.map(function (room) {
+                return {
+                    id: room.id,
+                    name: room.name,
+                    photos: room.photos.map(function (p) { return Object.assign({}, p); }),
+                    defects: room.defects.map(function (def) {
+                        return {
+                            id: def.id,
+                            type: def.type,
+                            description: def.description,
+                            photos: def.photos.map(function (p) { return Object.assign({}, p); })
+                        };
+                    })
+                };
+            })
+        };
+    }
+
+    function normalizePhoto(raw) {
+        if (!raw || !raw.blob) return null;
+        return {
+            id: String(raw.id || uid()),
+            blob: raw.blob,
+            thumb: String(raw.thumb || ''),
+            ext: String(raw.ext || 'jpg'),
+            w: Number(raw.w) || 0,
+            h: Number(raw.h) || 0,
+            size: Number(raw.size) || 0,
+            ts: Number(raw.ts) || Date.now()
+        };
+    }
+
+    /* Защита от испорченного черновика: всё приводим к ожидаемым типам */
+    function normalizeSnapshot(raw) {
+        if (!raw || typeof raw !== 'object' || !Array.isArray(raw.rooms)) return null;
+        const rooms = raw.rooms.filter(function (r) { return r && typeof r === 'object'; }).map(function (r) {
+            return {
+                id: String(r.id || uid()),
+                name: String(r.name || ''),
+                photos: (Array.isArray(r.photos) ? r.photos : []).map(normalizePhoto).filter(Boolean),
+                defects: (Array.isArray(r.defects) ? r.defects : [])
+                    .filter(function (d) { return d && typeof d === 'object'; })
+                    .map(function (d) {
+                        return {
+                            id: String(d.id || uid()),
+                            type: String(d.type || 'Дефект'),
+                            description: String(d.description || ''),
+                            photos: (Array.isArray(d.photos) ? d.photos : []).map(normalizePhoto).filter(Boolean)
+                        };
+                    })
+            };
+        });
+        if (!rooms.length) return null;
+        return {
+            date: String(raw.date || ''),
+            objectBase: String(raw.objectBase || ''),
+            objectDetail: String(raw.objectDetail || ''),
+            objectLabel: String(raw.objectLabel || ''),
+            contractor: String(raw.contractor || ''),
+            activeRoomId: raw.activeRoomId ? String(raw.activeRoomId) : rooms[0].id,
+            rooms: rooms
+        };
+    }
+
+    function checkDraft() {
+        return Store.get().then(function (record) {
+            const data = normalizeSnapshot(record && record.data);
+            if (!data) return;
+            pendingDraft = data;
+
+            const photos = data.rooms.reduce(function (sum, room) {
+                const inDefects = room.defects.reduce(function (n, def) { return n + def.photos.length; }, 0);
+                return sum + room.photos.length + inDefects;
+            }, 0);
+
+            let when = 'неизвестное время';
+            const saved = record && record.savedAt ? new Date(record.savedAt) : null;
+            if (saved && !isNaN(saved.getTime())) {
+                when = saved.toLocaleDateString('ru-RU') + ', ' +
+                    saved.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            }
+
+            $('#restore-text').textContent = 'Осмотр от ' + when + ': ' + data.rooms.length + ' ' +
+                plural(data.rooms.length, 'помещение', 'помещения', 'помещений') + ', ' +
+                photos + ' ' + plural(photos, 'фото', 'фото', 'фото') + '.';
+            openSheet('sheet-restore');
+        }).catch(function (err) {
+            console.warn('Черновик не прочитан:', err);
+        });
+    }
+
+    function applyDraft() {
+        if (!pendingDraft) return;
+        const data = pendingDraft;
+        state.date = data.date;
+        state.objectBase = data.objectBase;
+        state.objectDetail = data.objectDetail;
+        state.objectLabel = data.objectLabel || data.objectDetail || data.objectBase;
+        state.contractor = data.contractor;
+        state.rooms = data.rooms;
+        state.activeRoomId = data.activeRoomId;
+        state.started = true;
+        if (!state.rooms.some(function (r) { return r.id === state.activeRoomId; })) {
+            state.activeRoomId = state.rooms[0].id;
+        }
+        pendingDraft = null;
+        closeSheet('sheet-restore');
+        fillParamsFromState();
+        goToScreen('inspection', { silent: true });
+        renderInspection();
+        toast('Черновик восстановлен', 'ok');
+    }
+
+    function discardDraft() {
+        pendingDraft = null;
+        closeSheet('sheet-restore');
+        Store.remove().catch(function (err) { console.warn('Черновик не удалён:', err); });
+        toast('Черновик удалён');
+    }
+
+    /* =================================================================
+       6. НАВИГАЦИЯ
+       ================================================================= */
+    function updateSteps(name) {
+        const index = STEP_BY_SCREEN[name];
+        $$('#steps .step').forEach(function (el) {
+            const i = Number(el.dataset.i);
+            const hasStep = index !== undefined;
+            el.classList.toggle('is-active', hasStep && i === index);
+            el.classList.toggle('is-done', hasStep && i < index);
+        });
+    }
+
+    function goToScreen(name, options) {
+        const opts = options || {};
+        if (SCREENS.indexOf(name) === -1) name = 'start';
+        $$('.screen').forEach(function (el) { el.classList.remove('active'); });
+        const target = document.getElementById('screen-' + name);
+        if (target) target.classList.add('active');
+        currentScreen = name;
+        document.body.dataset.screen = name;
+        updateSteps(name);
+        if (!opts.silent) {
+            try { history.pushState({ screen: name }, ''); } catch (err) { /* не критично */ }
+        }
+        window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
+    /* =================================================================
+       7. ЭКРАН ПАРАМЕТРОВ
+       ================================================================= */
+    function setTodayDate() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        $('#input-date').value = yyyy + '-' + mm + '-' + dd;
+    }
+
+    function markInvalid(selector) {
+        const el = $(selector);
+        if (!el) return;
+        el.classList.add('invalid');
+        try { el.focus({ preventScroll: false }); } catch (err) { /* старые браузеры */ }
+        setTimeout(function () { el.classList.remove('invalid'); }, 2600);
+    }
+
+    function handleObjectChange() {
+        const value = $('#select-object').value;
+        const details = $('#object-details');
+        const selectWrap = $('#detail-select-wrapper');
+        const detailOther = $('#detail-other-input');
+        const objectText = $('#object-text-input');
+        const detailSelect = $('#select-object-detail');
+
+        detailSelect.innerHTML = '<option value="" disabled selected>Выберите элемент</option>';
+        $('#input-object-custom').value = '';
+        $('#input-detail-custom').value = '';
+        detailOther.hidden = true;
+        selectWrap.hidden = false;
+        objectText.hidden = true;
+
+        if (value === 'other') {
+            details.hidden = false;
+            selectWrap.hidden = true;
+            objectText.hidden = false;
+        } else if (value !== '') {
+            details.hidden = false;
+            (OBJECT_DETAILS[Number(value)] || []).forEach(function (item) {
+                detailSelect.add(new Option(item, item));
+            });
+            detailSelect.add(new Option('Другое', 'other'));
+        } else {
+            details.hidden = true;
+        }
+    }
+
+    function handleDetailChange() {
+        const value = $('#select-object-detail').value;
+        const custom = $('#input-detail-custom');
+        const wrap = $('#detail-other-input');
+        wrap.hidden = value !== 'other';
+        if (value !== 'other') custom.value = '';
+    }
+
+    function handleContractorChange() {
+        const value = $('#select-contractor').value;
+        $('#contractor-text-input').hidden = value !== 'other';
+        if (value !== 'other') $('#input-contractor-custom').value = '';
+    }
+
+    function startInspection() {
+        const date = $('#input-date').value;
+        if (!date) {
+            markInvalid('#input-date');
+            toast('Укажите дату осмотра', 'warn');
+            return;
+        }
+
+        const objectSelect = $('#select-object');
+        if (!objectSelect.value) {
+            markInvalid('#select-object');
+            toast('Выберите объект', 'warn');
+            return;
+        }
+        const objectBase = objectSelect.options[objectSelect.selectedIndex].text;
+        let objectDetail = '';
+
+        if (objectSelect.value === 'other') {
+            objectDetail = $('#input-object-custom').value.trim();
+            if (!objectDetail) {
+                markInvalid('#input-object-custom');
+                toast('Введите название объекта', 'warn');
+                return;
+            }
+        } else {
+            const detailValue = $('#select-object-detail').value;
+            if (detailValue === 'other') {
+                objectDetail = $('#input-detail-custom').value.trim();
+                if (!objectDetail) {
+                    markInvalid('#input-detail-custom');
+                    toast('Введите элемент объекта', 'warn');
+                    return;
+                }
+            } else {
+                objectDetail = detailValue || 'Не указано';
+            }
+        }
+
+        const contractorSelect = $('#select-contractor');
+        if (!contractorSelect.value) {
+            markInvalid('#select-contractor');
+            toast('Выберите подрядчика', 'warn');
+            return;
+        }
+        let contractor = contractorSelect.value === 'other'
+            ? $('#input-contractor-custom').value.trim()
+            : contractorSelect.options[contractorSelect.selectedIndex].text;
+        if (!contractor) {
+            markInvalid('#input-contractor-custom');
+            toast('Введите название подрядчика', 'warn');
+            return;
+        }
+
+        state.date = date;
+        state.objectBase = objectBase;
+        state.objectDetail = objectDetail;
+        state.objectLabel = objectDetail !== 'Не указано' ? objectDetail : objectBase;
+        state.contractor = contractor;
+
+        /* Если осмотр уже идёт — сохраняем помещения и фото,
+           меняем только параметры шапки. */
+        const isEditing = state.started && state.rooms.length > 0;
+        state.started = true;
+
+        if (!isEditing) {
+            const room = makeRoom(nextRoomName());
+            state.rooms = [room];
+            state.activeRoomId = room.id;
+        }
+
+        renderInspection();
+        goToScreen('inspection');
+        saveNow();
+
+        if (!isEditing) {
+            openRoomSheet('rename');
+            toast('Проверьте название помещения — оно попадёт в отчёт', 'info', 4200);
+        }
+    }
+
+    function fillParamsFromState() {
+        if (state.date) $('#input-date').value = state.date;
+        const objectSelect = $('#select-object');
+        if (state.objectBase) {
+            const match = Array.prototype.find.call(objectSelect.options, function (opt) {
+                return opt.text === state.objectBase;
+            });
+            if (match) {
+                objectSelect.value = match.value;
+                handleObjectChange();
+                if (match.value === 'other') {
+                    $('#input-object-custom').value = state.objectDetail;
+                } else if (state.objectDetail && state.objectDetail !== 'Не указано') {
+                    const detailSelect = $('#select-object-detail');
+                    const detailMatch = Array.prototype.find.call(detailSelect.options, function (opt) {
+                        return opt.value === state.objectDetail;
+                    });
+                    if (detailMatch) {
+                        detailSelect.value = detailMatch.value;
+                    } else {
+                        detailSelect.value = 'other';
+                        handleDetailChange();
+                        $('#input-detail-custom').value = state.objectDetail;
+                    }
+                }
+            }
+        }
+        const contractorSelect = $('#select-contractor');
+        if (state.contractor) {
+            const match = Array.prototype.find.call(contractorSelect.options, function (opt) {
+                return opt.text === state.contractor;
+            });
+            if (match) {
+                contractorSelect.value = match.value;
+                handleContractorChange();
+            } else {
+                contractorSelect.value = 'other';
+                handleContractorChange();
+                $('#input-contractor-custom').value = state.contractor;
+            }
+        }
+    }
+
+    /* =================================================================
+       8. ПОМЕЩЕНИЯ
+       ================================================================= */
+    function makeRoom(name) {
+        return { id: uid(), name: name || '', photos: [], defects: [] };
+    }
+
+    /* Пустое название больше не блокирует съёмку:
+       подставляем «Помещение N», переименовать можно в любой момент. */
+    function nextRoomName() {
+        let index = state.rooms.length + 1;
+        let name = 'Помещение ' + index;
+        while (state.rooms.some(function (room) { return room.name === name; })) {
+            index++;
+            name = 'Помещение ' + index;
+        }
+        return name;
+    }
+
+    function ensureRoomName(room) {
+        if (!room) return '';
+        if (!room.name.trim()) {
+            room.name = nextRoomName();
+            renderRoomSelect();
+            scheduleSave();
+        }
+        return room.name;
+    }
+
+    function activeRoom() {
+        if (!state.rooms.length) return null;
+        return state.rooms.find(function (room) { return room.id === state.activeRoomId; }) || state.rooms[0];
+    }
+
+    function renderRoomSelect() {
+        const select = $('#select-active-room');
+        if (!select) return;
+        select.innerHTML = '';
+        state.rooms.forEach(function (room) {
+            const option = document.createElement('option');
+            option.value = room.id;
+            option.textContent = room.name || 'Без названия — нажмите ✎';
+            if (room.id === state.activeRoomId) option.selected = true;
+            select.appendChild(option);
+        });
+
+        const room = activeRoom();
+        const led = $('#room-led');
+        const note = $('#room-note');
+        if (!room) {
+            if (note) note.textContent = 'Помещение не создано';
+            if (led) setLed('#room-led', 'off');
+            return;
+        }
+        if (!room.name) {
+            if (led) setLed('#room-led', 'warn');
+            if (note) note.textContent = 'Без названия: снимки заблокированы';
+        } else if (!room.photos.length && !room.defects.length) {
+            if (led) setLed('#room-led', 'warn');
+            if (note) note.textContent = 'Пусто: ни одного кадра';
+        } else {
+            const photos = room.photos.length;
+            if (led) setLed('#room-led', 'ok');
+            if (note) {
+                note.textContent = photos + ' ' + plural(photos, 'снимок', 'снимка', 'снимков') +
+                    ', ' + room.defects.length + ' ' + plural(room.defects.length, 'дефект', 'дефекта', 'дефектов');
+            }
+        }
+    }
+
+    function changeRoom(id) {
+        if (!state.rooms.some(function (room) { return room.id === id; })) return;
+        state.activeRoomId = id;
+        renderInspection();
+        scheduleSave();
+    }
+
+    function openRoomSheet(mode) {
+        const room = activeRoom();
+        if (mode === 'rename' && !room) return;
+        roomSheetMode = mode;
+        $('#sheet-room-title').textContent = mode === 'add' ? 'Новое помещение' : 'Название помещения';
+        $('#sheet-room-sub').textContent = mode === 'add'
+            ? 'Например: «Щитовая №2» или «Входная группа».'
+            : 'Название используется в отчёте и в именах папок.';
+        const input = $('#room-name-input');
+        input.value = mode === 'rename' && room ? room.name : nextRoomName();
+        input.classList.remove('invalid');
+        openSheet('sheet-room');
+        setTimeout(function () {
+            try { input.focus(); input.select(); } catch (err) { /* игнорируем */ }
+        }, 120);
+    }
+
+    function confirmRoomSheet() {
+        const input = $('#room-name-input');
+        const name = input.value.trim() || nextRoomName();
+        const duplicate = state.rooms.some(function (room) {
+            const isSelf = roomSheetMode === 'rename' && room.id === state.activeRoomId;
+            return !isSelf && room.name.toLowerCase() === name.toLowerCase();
+        });
+        if (duplicate) {
+            input.classList.add('invalid');
+            toast('Помещение с таким названием уже есть', 'warn');
+            return;
+        }
+
+        if (roomSheetMode === 'rename') {
+            const room = activeRoom();
+            if (!room) return;
+            room.name = name;
+        } else {
+            const room = makeRoom(name);
+            state.rooms.push(room);
+            state.activeRoomId = room.id;
+        }
+        closeSheet('sheet-room');
+        renderInspection();
+        scheduleSave();
+    }
+
+    function deleteRoom() {
+        const room = activeRoom();
+        if (!room) return;
+        if (state.rooms.length <= 1) {
+            toast('Нельзя удалить единственное помещение', 'warn');
+            return;
+        }
+        const photos = room.photos.length + room.defects.reduce(function (n, def) { return n + def.photos.length; }, 0);
+        uiConfirm({
+            title: 'Удалить помещение?',
+            message: '«' + (room.name || 'Без названия') + '» и ' + photos + ' ' +
+                plural(photos, 'фото', 'фото', 'фото') + ' будут удалены безвозвратно.',
+            okText: 'Удалить',
+            danger: true
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            const index = state.rooms.findIndex(function (r) { return r.id === room.id; });
+            state.rooms = state.rooms.filter(function (r) { return r.id !== room.id; });
+            const next = state.rooms[Math.max(0, index - 1)] || state.rooms[0];
+            state.activeRoomId = next ? next.id : null;
+            renderInspection();
+            scheduleSave();
+            toast('Помещение удалено');
+        });
+    }
+    /* =================================================================
+       9. РЕНДЕР ЭКРАНА ОСМОТРА
+       ================================================================= */
+    const PLACEHOLDER_THUMB = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+        '<rect width="100" height="100" fill="#0e151c"/>' +
+        '<path d="M26 58l14-16 11 13 9-9 14 12" fill="none" stroke="#3b4b5a" stroke-width="3" stroke-linecap="round"/>' +
+        '<circle cx="35" cy="35" r="5" fill="#3b4b5a"/></svg>'
+    );
+
+    function totalPhotos() {
+        return state.rooms.reduce(function (sum, room) {
+            const inDefects = room.defects.reduce(function (n, def) { return n + def.photos.length; }, 0);
+            return sum + room.photos.length + inDefects;
+        }, 0);
+    }
+
+    function totalDefects() {
+        return state.rooms.reduce(function (sum, room) { return sum + room.defects.length; }, 0);
+    }
+
+    function totalBytes() {
+        let bytes = 0;
+        state.rooms.forEach(function (room) {
+            room.photos.forEach(function (p) { bytes += p.size || 0; });
+            room.defects.forEach(function (def) {
+                def.photos.forEach(function (p) { bytes += p.size || 0; });
+            });
+        });
+        return bytes;
+    }
+
+    function thumbMarkup(photo, alt) {
+        return '<figure class="thumb" data-pid="' + escapeHtml(photo.id) + '">' +
+            '<img src="' + (photo.thumb || PLACEHOLDER_THUMB) + '" alt="' + escapeHtml(alt) + '" loading="lazy">' +
+            '<button class="thumb-del" type="button" data-del-photo="' + escapeHtml(photo.id) +
+            '" aria-label="Удалить фото">×</button>' +
+            '</figure>';
+    }
+
+    function renderInspection() {
+        const room = activeRoom();
+        if (!room) {
+            goToScreen('params', { silent: true });
+            return;
+        }
+        $('#view-object').textContent = state.objectLabel || state.objectBase || '—';
+        $('#view-date').textContent = formatDateRu(state.date);
+        $('#view-contractor').textContent = state.contractor || '—';
+        $('#defect-room-name').textContent = room.name || 'Без названия';
+        renderRoomSelect();
+        renderPhotos();
+        renderDefects();
+        renderCounters();
+    }
+
+    function renderPhotos() {
+        const grid = $('#photo-grid');
+        const room = activeRoom();
+        if (!grid) return;
+        if (!room || !room.photos.length) {
+            grid.innerHTML = '<p class="empty">Снимков пока нет</p>';
+            return;
+        }
+        grid.innerHTML = room.photos.map(function (photo, index) {
+            return thumbMarkup(photo, 'Фото ' + (index + 1));
+        }).join('');
+    }
+
+    function renderDefects() {
+        const list = $('#defect-list');
+        const room = activeRoom();
+        if (!list) return;
+        if (!room || !room.defects.length) {
+            list.innerHTML = '<p class="empty">Дефекты не зафиксированы</p>';
+            return;
+        }
+        list.innerHTML = room.defects.map(function (def) {
+            const thumbs = def.photos.map(function (photo) {
+                return thumbMarkup(photo, 'Фото дефекта');
+            }).join('');
+            const description = def.description
+                ? escapeHtml(def.description)
+                : '<span style="opacity:.6">без описания</span>';
+            return '<div class="defect-card" data-did="' + escapeHtml(def.id) + '">' +
+                '<div class="defect-head">' +
+                    '<span class="defect-icon"><svg><use href="#i-alert"/></svg></span>' +
+                    '<div class="defect-text">' +
+                        '<div class="defect-type">' + escapeHtml(def.type) + '</div>' +
+                        '<div class="defect-desc">' + description + '</div>' +
+                    '</div>' +
+                    '<div class="defect-actions">' +
+                        '<button class="icon-btn" type="button" data-act="edit" aria-label="Изменить описание">' +
+                            '<svg><use href="#i-pencil"/></svg></button>' +
+                        '<button class="icon-btn danger" type="button" data-act="del" aria-label="Удалить дефект">' +
+                            '<svg><use href="#i-trash"/></svg></button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="thumb-row">' + thumbs +
+                    '<figure class="thumb thumb-add" data-act="photo" role="button" tabindex="0" ' +
+                        'aria-label="Добавить фото дефекта">+</figure>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function renderCounters() {
+        const room = activeRoom();
+        $('#photo-count').textContent = room ? room.photos.length : 0;
+        $('#defect-count').textContent = room ? room.defects.length : 0;
+        const photos = totalPhotos();
+        $('#bb-photos').textContent = photos + ' ' + plural(photos, 'фото', 'фото', 'фото');
+        $('#bb-size').textContent = formatBytes(totalBytes());
+    }
+
+    /* =================================================================
+       10. ПРОСМОТР ФОТО
+       ================================================================= */
+    let lightboxUrl = null;
+
+    function openLightbox(photo) {
+        if (!photo || !photo.blob) return;
+        closeLightbox();
+        try {
+            lightboxUrl = URL.createObjectURL(photo.blob);
+            $('#lightbox-img').src = lightboxUrl;
+            $('#lightbox').classList.add('open');
+            $('#lightbox').setAttribute('aria-hidden', 'false');
+            syncScrollLock();
+        } catch (err) {
+            console.warn('Не удалось открыть фото:', err);
+            toast('Не удалось открыть фото', 'err');
+        }
+    }
+
+    function closeLightbox() {
+        $('#lightbox').classList.remove('open');
+        $('#lightbox').setAttribute('aria-hidden', 'true');
+        if (lightboxUrl) {
+            URL.revokeObjectURL(lightboxUrl);
+            lightboxUrl = null;
+        }
+        $('#lightbox-img').removeAttribute('src');
+        syncScrollLock();
+    }
+
+    function confirmDeletePhoto(photos, photoId) {
+        if (!photos) return;
+        const index = photos.findIndex(function (p) { return p.id === photoId; });
+        if (index === -1) return;
+        uiConfirm({
+            title: 'Удалить кадр?',
+            message: 'Фотография будет удалена из осмотра.',
+            okText: 'Удалить',
+            danger: true
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            photos.splice(index, 1);
+            renderCamStrip();
+            updateCamCount();
+            renderInspection();
+            scheduleSave();
+            toast('Кадр удалён');
+        });
+    }
+
+    /* =================================================================
+       11. ДЕФЕКТЫ
+       ================================================================= */
+    let defectDraftType = '';
+    let defectEditingId = null;
+    let currentDescPrefix = '';
+
+    /* Описание дефекта начинается с названия помещения:
+       «Помещение №1: …» — так в отчёте сразу видно, где дефект. */
+    function roomPrefix() {
+        const room = activeRoom();
+        return room && room.name ? room.name + ': ' : '';
+    }
+
+    function cleanDescription(value) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+        if (currentDescPrefix && text === currentDescPrefix.trim()) return '';
+        return text;
+    }
+
+    function openDefectScreen() {
+        const room = activeRoom();
+        if (!room) return;
+        ensureRoomName(room);
+        $('#defect-room-name').textContent = room.name;
+        renderDefectTypes();
+        goToScreen('defect');
+    }
+
+    function renderDefectTypes() {
+        const list = $('#defect-type-list');
+        if (!list) return;
+        list.innerHTML = '';
+        DEFECT_TYPES.forEach(function (type, index) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'type-btn' + (type === 'Другое' ? ' is-other' : '');
+            button.innerHTML = '<span class="num">' + String(index + 1).padStart(2, '0') + '</span>' +
+                '<span class="type-name">' + escapeHtml(type) + '</span>';
+            button.addEventListener('click', function () { pickDefectType(type); });
+            list.appendChild(button);
+        });
+    }
+
+    function pickDefectType(type) {
+        defectEditingId = null;
+        currentDescPrefix = roomPrefix();
+
+        if (type === 'Другое') {
+            $('#other-name-input').value = '';
+            $('#other-name-input').classList.remove('invalid');
+            $('#other-desc-input').value = currentDescPrefix;
+            openSheet('sheet-other');
+            setTimeout(function () {
+                try { $('#other-name-input').focus(); } catch (err) { /* игнорируем */ }
+            }, 130);
+            return;
+        }
+
+        defectDraftType = type;
+        $('#sheet-defect-title').textContent = 'Описание дефекта';
+        $('#sheet-defect-sub').textContent = 'Вид работ: ' + type;
+        const field = $('#defect-desc-input');
+        field.value = currentDescPrefix;
+        $('#defect-ok').textContent = 'Далее';
+        openSheet('sheet-defect');
+        setTimeout(function () {
+            try {
+                field.focus();
+                field.setSelectionRange(field.value.length, field.value.length);
+            } catch (err) { /* игнорируем */ }
+        }, 130);
+    }
+
+    function confirmDefectSheet() {
+        const room = activeRoom();
+        if (!room) return;
+        const description = cleanDescription($('#defect-desc-input').value);
+
+        if (defectEditingId) {
+            const def = room.defects.find(function (d) { return d.id === defectEditingId; });
+            if (def) def.description = description;
+            defectEditingId = null;
+            closeSheet('sheet-defect');
+            renderInspection();
+            scheduleSave();
+            toast('Описание обновлено', 'ok');
+            return;
+        }
+
+        const defect = {
+            id: uid(),
+            type: defectDraftType,
+            description: description,
+            photos: []
+        };
+        room.defects.push(defect);
+        closeSheet('sheet-defect');
+        renderInspection();
+        scheduleSave();
+        openCamera({ kind: 'defect', id: defect.id });
+    }
+
+    function confirmOtherDefect() {
+        const nameInput = $('#other-name-input');
+        const name = nameInput.value.trim();
+        if (!name) {
+            nameInput.classList.add('invalid');
+            toast('Введите название вида работ', 'warn');
+            return;
+        }
+        const room = activeRoom();
+        if (!room) return;
+        const defect = {
+            id: uid(),
+            type: name,
+            description: cleanDescription($('#other-desc-input').value),
+            photos: []
+        };
+        room.defects.push(defect);
+        closeSheet('sheet-other');
+        renderInspection();
+        scheduleSave();
+        openCamera({ kind: 'defect', id: defect.id });
+    }
+
+    function editDefect(defectId) {
+        const room = activeRoom();
+        if (!room) return;
+        const def = room.defects.find(function (d) { return d.id === defectId; });
+        if (!def) return;
+        defectEditingId = defectId;
+        currentDescPrefix = '';
+        $('#sheet-defect-title').textContent = 'Описание дефекта';
+        $('#sheet-defect-sub').textContent = 'Вид работ: ' + def.type;
+        $('#defect-desc-input').value = def.description || '';
+        $('#defect-ok').textContent = 'Сохранить';
+        openSheet('sheet-defect');
+    }
+
+    function deleteDefect(defectId) {
+        const room = activeRoom();
+        if (!room) return;
+        const def = room.defects.find(function (d) { return d.id === defectId; });
+        if (!def) return;
+        uiConfirm({
+            title: 'Удалить дефект?',
+            message: '«' + def.type + '» и ' + def.photos.length + ' ' +
+                plural(def.photos.length, 'фото', 'фото', 'фото') + ' будут удалены.',
+            okText: 'Удалить',
+            danger: true
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            room.defects = room.defects.filter(function (d) { return d.id !== defectId; });
+            renderInspection();
+            scheduleSave();
+            toast('Дефект удалён');
+        });
+    }
+
+    /* =================================================================
+       12. КАМЕРА
+       Живое превью через getUserMedia: неограниченное число кадров
+       за один заход. Если браузер запрещает камеру (file://, WebView),
+       автоматически включается цикл системной камеры — кадры тоже
+       сохраняются сразу.
+       ================================================================= */
+    const cam = {
+        open: false,
+        mode: 'live',
+        stream: null,
+        facing: 'environment',
+        torchOn: false,
+        torchTrack: null,
+        target: null,
+        wakeLock: null,
+        busy: false
+    };
+
+    function targetPhotos(target) {
+        const room = activeRoom();
+        if (!room) return null;
+        if (target && target.kind === 'defect') {
+            const def = room.defects.find(function (d) { return d.id === target.id; });
+            return def ? def.photos : null;
+        }
+        return room.photos;
+    }
+
+    function openCamera(target) {
+        const room = activeRoom();
+        if (!room) {
+            toast('Сначала начните осмотр', 'warn');
+            return;
+        }
+        if (!room.name.trim()) ensureRoomName(room);
+        cam.target = target || { kind: 'room' };
+        if (cam.target.kind === 'defect' && !targetPhotos(cam.target)) {
+            toast('Дефект не найден', 'err');
+            return;
+        }
+        cam.open = true;
+        cam.busy = false;
+        $('#camera').classList.add('open');
+        $('#camera').setAttribute('aria-hidden', 'false');
+        syncScrollLock();
+        renderCamStrip();
+        updateCamCount();
+        setCameraDebug(null);
+        $('#cam-hint').textContent = 'Запускаю камеру…';
+        startLiveCamera();
+    }
+
+    function closeCamera() {
+        if (!cam.open) return;
+        const target = cam.target;
+        const attached = (function () {
+            const list = targetPhotos(target);
+            return list ? list.length : 0;
+        })();
+
+        cam.open = false;
+        stopLiveCamera();
+        releaseWakeLock();
+        $('#camera').classList.remove('open');
+        $('#camera').setAttribute('aria-hidden', 'true');
+        $('#camera').dataset.mode = 'live';
+        cam.mode = 'live';
+        cam.target = null;
+        syncScrollLock();
+        renderInspection();
+        scheduleSave();
+
+        /* Возвращаемся туда, где кадры видны: иначе кажется, что снимок потерялся */
+        if (target && target.kind === 'defect' && currentScreen === 'defect') {
+            goToScreen('inspection', { silent: true });
+        }
+        if (attached > 0) {
+            toast('В осмотре ' + attached + ' ' + plural(attached, 'кадр', 'кадра', 'кадров'), 'ok', 2400);
+        }
+    }
+
+    function stopStream(stream) {
+        if (!stream) return;
+        try {
+            stream.getTracks().forEach(function (track) { track.stop(); });
+        } catch (err) { /* поток уже закрыт */ }
+    }
+
+    function stopLiveCamera() {
+        if (cam.stream) {
+            stopStream(cam.stream);
+            cam.stream = null;
+        }
+        try { $('#cam-video').srcObject = null; } catch (err) { /* игнорируем */ }
+        cam.torchTrack = null;
+        cam.torchOn = false;
+        const torchBtn = $('#cam-torch');
+        if (torchBtn) { torchBtn.hidden = true; torchBtn.classList.remove('is-on'); }
+    }
+
+    function cameraErrorText(err) {
+        const name = err && err.name ? String(err.name) : '';
+        const message = err && err.message ? String(err.message) : '';
+        const isFile = (typeof location !== 'undefined' && location.protocol === 'file:');
+
+        if (message === 'preview-stuck') {
+            return 'Камера включилась, но картинка не пошла. Снимите системной камерой — кадры сохранятся так же.';
+        }
+        /* Локальный файл: Chrome и Яндекс браузер блокируют getUserMedia */
+        if (isFile) {
+            return 'Приложение открыто файлом с телефона, а браузер запрещает встроенную камеру для таких файлов. ' +
+                'Снимайте кнопкой «Открыть системную камеру» — снимки сохранятся. ' +
+                'Непрерывная съёмка заработает, если открыть приложение по ссылке https://.';
+        }
+        if (name === 'TimeoutError' || message === 'camera-timeout') {
+            return 'Браузер не ответил на запрос камеры. Нажмите «Открыть системную камеру» — снимать можно и так. ' +
+                'Чтобы работало превью, разрешите камеру в значке замка адресной строки.';
+        }
+        if (message === 'insecure') {
+            return 'Живое превью работает только по HTTPS или на localhost. Откройте приложение по https-ссылке ' +
+                'либо снимайте системной камерой.';
+        }
+        if (name === 'NotAllowedError' || name === 'SecurityError') {
+            return 'Доступ к камере запрещён. Разрешите камеру в настройках браузера для этой страницы ' +
+                'или снимайте системной камерой.';
+        }
+        if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+            return 'Камера не найдена или этот объектив недоступен. Используйте системную камеру.';
+        }
+        if (name === 'NotReadableError' || name === 'AbortError') {
+            return 'Камера занята другим приложением. Закройте его и попробуйте снова либо снимайте системной камерой.';
+        }
+        return 'Браузер не дал доступ к камере. Снимки можно делать системной камерой — они сразу сохраняются в осмотр.';
+    }
+
+    /* Причина для поддержки: протокол и имя ошибки */
+    function setCameraDebug(err) {
+        const el = $('#cam-debug');
+        if (!el) return;
+        const protocol = (typeof location !== 'undefined' && location.protocol) ? location.protocol : '?';
+        const errorName = err && err.name ? String(err.name) : (err && err.message ? String(err.message) : '');
+        el.textContent = 'Диагностика: ' + protocol + (errorName ? ' · ' + errorName : '');
+    }
+
+    function switchToNative(reason, err) {
+        stopLiveCamera();
+        cam.mode = 'native';
+        $('#camera').dataset.mode = 'native';
+        $('#cam-reason').textContent = reason || cameraErrorText(err);
+        $('#cam-hint').textContent = 'Системная камера: кадры сразу попадают в осмотр';
+        setCameraDebug(err);
+    }
+
+    /* Ждём первый кадр видеопотока: videoWidth = 0 — частая причина
+       «невозможно сделать снимок» сразу после включения камеры. */
+    function waitForVideo(video, timeout) {
+        if (video.videoWidth > 0) return Promise.resolve(true);
+        return new Promise(function (resolve) {
+            let settled = false;
+            let timer = null;
+            let poll = null;
+
+            function cleanup() {
+                if (timer) clearTimeout(timer);
+                if (poll) clearInterval(poll);
+                video.removeEventListener('loadedmetadata', check);
+                video.removeEventListener('playing', check);
+                video.removeEventListener('timeupdate', check);
+            }
+            function finish(ok) {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                resolve(ok);
+            }
+            function check() {
+                if (video.videoWidth > 0) finish(true);
+            }
+
+            timer = setTimeout(function () { finish(video.videoWidth > 0); }, timeout || 4000);
+            poll = setInterval(check, 120);
+            video.addEventListener('loadedmetadata', check);
+            video.addEventListener('playing', check);
+            video.addEventListener('timeupdate', check);
+            video.play().then(check).catch(function () { /* автоплей может быть заблокирован */ });
+            check();
+        });
+    }
+
+    /* Ограничиваем ожидание getUserMedia: если пользователь закрыл запрос
+       разрешения, камера может «висеть» и экран останется чёрным. */
+    function withTimeout(promise, ms) {
+        return new Promise(function (resolve, reject) {
+            let settled = false;
+            const timer = setTimeout(function () {
+                if (settled) return;
+                settled = true;
+                const error = new Error('camera-timeout');
+                error.name = 'TimeoutError';
+                reject(error);
+            }, ms);
+            promise.then(function (value) {
+                if (settled) {
+                    if (value && typeof value.getTracks === 'function') stopStream(value);
+                    return;
+                }
+                settled = true;
+                clearTimeout(timer);
+                resolve(value);
+            }, function (error) {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                reject(error);
+            });
+        });
+    }
+
+    function startLiveCamera() {
+        cam.mode = 'live';
+        $('#camera').dataset.mode = 'live';
+        cam.stream = null;
+        const media = navigator.mediaDevices;
+        if (!media || typeof media.getUserMedia !== 'function') {
+            switchToNative(cameraErrorText(new Error('insecure')));
+            return Promise.resolve();
+        }
+        return withTimeout(media.getUserMedia({
+            audio: false,
+            video: {
+                facingMode: { ideal: cam.facing },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            }
+        }), 20000).then(function (stream) {
+            if (!cam.open) {
+                stopStream(stream);
+                return null;
+            }
+            cam.stream = stream;
+            const video = $('#cam-video');
+            video.srcObject = stream;
+            video.muted = true;
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', '');
+            return waitForVideo(video, 5000).then(function (ready) {
+                if (!ready) throw new Error('preview-stuck');
+                setupTorch();
+                requestWakeLock();
+                $('#cam-hint').textContent = 'Готово к съёмке — кадры сохраняются сразу';
+            });
+        }).catch(function (err) {
+            console.warn('Живая камера недоступна:', err);
+            switchToNative(cameraErrorText(err), err);
+        });
+    }
+
+    function setupTorch() {
+        const button = $('#cam-torch');
+        if (!button) return;
+        button.hidden = true;
+        button.classList.remove('is-on');
+        cam.torchOn = false;
+        cam.torchTrack = null;
+        try {
+            const tracks = cam.stream ? cam.stream.getVideoTracks() : [];
+            const track = tracks && tracks[0];
+            if (!track) return;
+            cam.torchTrack = track;
+            const caps = typeof track.getCapabilities === 'function' ? track.getCapabilities() : null;
+            if (caps && caps.torch) button.hidden = false;
+        } catch (err) { /* фонарик не поддерживается */ }
+    }
+
+    function toggleTorch() {
+        if (!cam.torchTrack) return;
+        const next = !cam.torchOn;
+        cam.torchTrack.applyConstraints({ advanced: [{ torch: next }] }).then(function () {
+            cam.torchOn = next;
+            $('#cam-torch').classList.toggle('is-on', next);
+        }).catch(function () {
+            toast('Фонарик недоступен на этом устройстве', 'warn');
+            $('#cam-torch').hidden = true;
+        });
+    }
+
+    function switchCamera() {
+        if (cam.mode !== 'live') return;
+        cam.facing = cam.facing === 'environment' ? 'user' : 'environment';
+        stopLiveCamera();
+        startLiveCamera();
+    }
+
+    function requestWakeLock() {
+        if (!('wakeLock' in navigator) || !navigator.wakeLock) return;
+        try {
+            navigator.wakeLock.request('screen').then(function (lock) {
+                cam.wakeLock = lock;
+                lock.addEventListener('release', function () { cam.wakeLock = null; });
+            }).catch(function () { cam.wakeLock = null; });
+        } catch (err) { cam.wakeLock = null; }
+    }
+
+    function releaseWakeLock() {
+        try {
+            if (cam.wakeLock) {
+                cam.wakeLock.release();
+                cam.wakeLock = null;
+            }
+        } catch (err) { /* уже отпущен */ }
+    }
+
+    function flashShutter() {
+        const camera = $('#camera');
+        camera.classList.remove('flash');
+        /* перезапуск анимации вспышки */
+        void camera.offsetWidth;
+        camera.classList.add('flash');
+        setTimeout(function () { camera.classList.remove('flash'); }, 200);
+    }
+
+    function captureShot() {
+        if (cam.busy) return;
+        if (cam.mode !== 'live') {
+            openNativeCamera();
+            return;
+        }
+        cam.busy = true;
+        const shutter = $('#cam-shutter');
+        if (shutter) shutter.classList.add('is-busy');
+
+        captureFromPreview().catch(function (err) {
+            console.warn('Кадр из превью не получен:', err);
+            return captureWithImageCapture();
+        }).then(function (photo) {
+            attachPhoto(photo);
+            flashShutter();
+            $('#cam-hint').textContent = 'Готово к съёмке — кадры сохраняются сразу';
+        }).catch(function (err) {
+            console.warn('Системная съёмка:', err);
+            switchToNative(
+                'Не удалось получить кадр из превью. Снимайте системной камерой — кадры сохранятся так же.',
+                err
+            );
+        }).then(function () {
+            cam.busy = false;
+            if (shutter) shutter.classList.remove('is-busy');
+        });
+    }
+
+    function captureFromPreview() {
+        return Promise.resolve().then(function () {
+            const video = $('#cam-video');
+            if (!cam.stream) throw new Error('Нет видеопотока');
+            return waitForVideo(video, 2500).then(function (ready) {
+                if (!ready) throw new Error('preview-stuck');
+                return photoFromVideo();
+            });
+        });
+    }
+
+    /* Запасной путь: ImageCapture.takePhoto() берёт полноразмерный кадр там,
+       где не получается снять с <video>. */
+    function captureWithImageCapture() {
+        return new Promise(function (resolve, reject) {
+            try {
+                if (typeof window.ImageCapture !== 'function') {
+                    throw new Error('ImageCapture не поддерживается');
+                }
+                const track = cam.stream && cam.stream.getVideoTracks()[0];
+                if (!track) throw new Error('Нет видеопотока');
+                new window.ImageCapture(track).takePhoto().then(function (blob) {
+                    return makePhoto(blob);
+                }).then(resolve).catch(reject);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    /* Перед запуском системной камеры фиксируем черновик:
+       Android может выгрузить вкладку, пока работает камера. */
+    function openNativeCamera() {
+        saveNow();
+        $('#input-camera').click();
+    }
+
+    function openGallery() {
+        saveNow();
+        $('#input-gallery').click();
+    }
+
+    function attachPhoto(photo) {
+        const list = targetPhotos(cam.target);
+        if (!list) {
+            toast('Не найдено помещение', 'err');
+            return;
+        }
+        list.push(photo);
+        try { if (navigator.vibrate) navigator.vibrate(18); } catch (err) { /* без вибро */ }
+        renderCamStrip();
+        updateCamCount();
+        renderInspection();
+        scheduleSave();
+
+        /* Короткое подтверждение, что кадр принят */
+        const counter = $('.cam-counter');
+        if (counter) {
+            counter.classList.remove('saved');
+            void counter.offsetWidth;
+            counter.classList.add('saved');
+        }
+    }
+
+    function renderCamStrip() {
+        const strip = $('#cam-strip');
+        if (!strip) return;
+        const list = targetPhotos(cam.target);
+        if (!list || !list.length) {
+            strip.innerHTML = '<span class="strip-empty">кадров пока нет</span>';
+            return;
+        }
+        const recent = list.slice(-24);
+        strip.innerHTML = recent.map(function (photo) {
+            return thumbMarkup(photo, 'Кадр');
+        }).join('');
+        strip.scrollLeft = strip.scrollWidth;
+    }
+
+    function updateCamCount() {
+        const list = targetPhotos(cam.target);
+        const count = list ? list.length : 0;
+        const counter = $('#cam-count');
+        const word = $('#cam-count-word');
+        if (counter) counter.textContent = count;
+        if (word) word.textContent = plural(count, 'кадр', 'кадра', 'кадров');
+    }
+
+    /* =================================================================
+       13. ОБРАБОТКА ИЗОБРАЖЕНИЙ
+       ================================================================= */
+    function loadImageElement(blob) {
+        return new Promise(function (resolve, reject) {
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = function () {
+                img.__objectUrl = url;
+                resolve(img);
+            };
+            img.onerror = function () {
+                URL.revokeObjectURL(url);
+                reject(new Error('Файл не открывается как изображение (возможно, формат HEIC)'));
+            };
+            img.src = url;
+        });
+    }
+
+    function loadImageSource(blob) {
+        if (typeof createImageBitmap === 'function') {
+            let promise = null;
+            try {
+                promise = createImageBitmap(blob, { imageOrientation: 'from-image' });
+            } catch (err) {
+                promise = null;
+            }
+            if (promise && typeof promise.then === 'function') {
+                return promise.catch(function () { return loadImageElement(blob); });
+            }
+        }
+        return loadImageElement(blob);
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+        return new Promise(function (resolve, reject) {
+            if (typeof canvas.toBlob !== 'function') {
+                try {
+                    const dataUrl = canvas.toDataURL(type, quality);
+                    const binary = atob(dataUrl.split(',')[1]);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    resolve(new Blob([bytes], { type: type }));
+                } catch (err) {
+                    reject(err);
+                }
+                return;
+            }
+            try {
+                canvas.toBlob(function (blob) {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Не удалось сжать кадр'));
+                }, type || 'image/jpeg', quality || JPEG_QUALITY);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    function scaleCanvas(source, maxSide) {
+        const width = source.width;
+        const height = source.height;
+        const limit = Math.max(width, height);
+        if (limit <= maxSide) return source;
+        const scale = maxSide / limit;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas недоступен');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+        return canvas;
+    }
+
+    function makeThumb(source, maxSide) {
+        const canvas = scaleCanvas(source, maxSide);
+        try {
+            return canvas.toDataURL('image/jpeg', 0.62);
+        } catch (err) {
+            console.warn('Миниатюра не создана:', err);
+            return PLACEHOLDER_THUMB;
+        }
+    }
+
+    function photoFromCanvas(canvas) {
+        const scaled = scaleCanvas(canvas, MAX_SIDE);
+        return canvasToBlob(scaled, 'image/jpeg', JPEG_QUALITY).then(function (blob) {
+            return {
+                id: uid(),
+                blob: blob,
+                thumb: makeThumb(scaled, THUMB_SIDE),
+                ext: 'jpg',
+                w: scaled.width,
+                h: scaled.height,
+                size: blob.size || 0,
+                ts: Date.now()
+            };
+        });
+    }
+
+    function photoFromVideo() {
+        return new Promise(function (resolve, reject) {
+            const video = $('#cam-video');
+            const width = video.videoWidth;
+            const height = video.videoHeight;
+            if (!width || !height) {
+                reject(new Error('Камера ещё не готова — попробуйте через секунду'));
+                return;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                reject(new Error('Браузер не поддерживает обработку изображений'));
+                return;
+            }
+            try {
+                ctx.drawImage(video, 0, 0, width, height);
+                resolve(photoFromCanvas(canvas));
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    function makePhoto(file) {
+        return loadImageSource(file).then(function (source) {
+            const width = source.width || source.naturalWidth || 0;
+            const height = source.height || source.naturalHeight || 0;
+            if (!width || !height) throw new Error('Пустое изображение');
+            /* Масштабируем сразу при отрисовке: не держим в памяти
+               полноразмерный canvas от 12-мегапиксельного снимка. */
+            const scale = Math.min(1, MAX_SIDE / Math.max(width, height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(width * scale));
+            canvas.height = Math.max(1, Math.round(height * scale));
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas недоступен');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+            if (source.__objectUrl) {
+                URL.revokeObjectURL(source.__objectUrl);
+                source.__objectUrl = null;
+            }
+            if (typeof source.close === 'function') source.close();
+            return photoFromCanvas(canvas);
+        });
+    }
+
+    /* Если браузер не смог декодировать файл (например, HEIC),
+       сохраняем оригинал — фото всё равно попадёт в архив. */
+    function makeFallbackPhoto(file) {
+        const type = file.type || 'image/jpeg';
+        let ext = 'jpg';
+        if (/png/i.test(type)) ext = 'png';
+        else if (/webp/i.test(type)) ext = 'webp';
+        else if (/gif/i.test(type)) ext = 'gif';
+        else if (/hei[cf]/i.test(type)) ext = 'heic';
+        return {
+            id: uid(),
+            blob: file,
+            thumb: PLACEHOLDER_THUMB,
+            ext: ext,
+            w: 0,
+            h: 0,
+            size: file.size || 0,
+            ts: Date.now()
+        };
+    }
+
+    /* КРИТИЧНО: сначала копируем FileList в массив и только потом сбрасываем
+       input.value. Сброс очищает живой FileList — из-за этого кадр
+       из системной камеры мог «потеряться» и не попасть в осмотр. */
+    function onFilesPicked(event) {
+        const input = event.target;
+        const files = Array.prototype.slice.call(input.files || []);
+        input.value = '';
+        if (!files.length) return;
+        handleFiles(files, cam.target);
+    }
+
+    function handleFiles(fileList, target) {
+        const files = Array.prototype.slice.call(fileList || []).filter(function (file) {
+            return file && file.size > 0;
+        });
+        if (!files.length) return Promise.resolve();
+
+        const list = targetPhotos(target || cam.target);
+        if (!list) {
+            toast('Не найдено помещение', 'err');
+            return Promise.resolve();
+        }
+
+        showBusy('Обработка фото 0/' + files.length, true);
+        let added = 0;
+        let failed = 0;
+        let chain = Promise.resolve();
+
+        files.forEach(function (file, index) {
+            chain = chain.then(function () {
+                $('#busy-text').textContent = 'Обработка фото ' + (index + 1) + '/' + files.length;
+                setBusyProgress(((index + 1) / files.length) * 100);
+                return makePhoto(file).then(function (photo) {
+                    list.push(photo);
+                    added++;
+                }).catch(function (err) {
+                    console.warn('Фото не обработано:', err);
+                    try {
+                        list.push(makeFallbackPhoto(file));
+                        added++;
+                    } catch (err2) {
+                        failed++;
+                    }
+                });
+            });
+        });
+
+        return chain.then(function () {
+            hideBusy();
+            renderCamStrip();
+            updateCamCount();
+            renderInspection();
+            scheduleSave();
+            if (added) {
+                toast(added + ' ' + plural(added, 'кадр добавлен', 'кадра добавлено', 'кадров добавлено'), 'ok');
+            }
+            if (failed) {
+                toast(failed + ' ' + plural(failed, 'файл не открыт', 'файла не открыто', 'файлов не открыто'), 'err', 4500);
+            }
+        }).catch(function (err) {
+            hideBusy();
+            console.error('Ошибка обработки файлов:', err);
+            toast('Не удалось обработать фото', 'err');
+        });
+    }
+    /* =================================================================
+       14. БИБЛИОТЕКИ ZIP/XLSX
+       Основной адрес — CDN в шапке; при сбое пробуем резервные.
+       ================================================================= */
+    const LIB_SOURCES = {
+        JSZip: [
+            'vendor/jszip.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+            'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+            'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+        ],
+        XLSX: [
+            'vendor/xlsx.full.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+            'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+            'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+        ]
+    };
+
+    function loadScript(url) {
+        return new Promise(function (resolve, reject) {
+            const script = document.createElement('script');
+            script.src = url;
+            script.async = true;
+            script.onload = function () { resolve(); };
+            script.onerror = function () {
+                script.remove();
+                reject(new Error('Не загрузился скрипт: ' + url));
+            };
+            document.head.appendChild(script);
+        });
+    }
+
+    function loadLibrary(name) {
+        return (LIB_SOURCES[name] || []).reduce(function (chain, url) {
+            return chain.catch(function () { return loadScript(url); });
+        }, Promise.reject(new Error('Нет источников для ' + name)));
+    }
+
+    function ensureLibs() {
+        const tasks = [];
+        if (typeof window.JSZip === 'undefined') tasks.push(loadLibrary('JSZip'));
+        if (typeof window.XLSX === 'undefined') tasks.push(loadLibrary('XLSX'));
+        if (!tasks.length) return Promise.resolve();
+        return Promise.all(tasks).then(function () {
+            if (typeof window.JSZip === 'undefined' || typeof window.XLSX === 'undefined') {
+                throw new Error('Библиотеки не загрузились');
+            }
+            renderSystemCheck();
+        }).catch(function (err) {
+            console.error('Загрузка библиотек:', err);
+            throw new Error('Нет доступа к библиотекам ZIP/XLSX. Подключите интернет и повторите выгрузку.');
+        });
+    }
+
+    /* =================================================================
+       15. EXCEL
+       Структура книги повторяет версию 0.0 без изменений:
+       лист «Основные данные», 10 колонок в прежнем порядке,
+       те же 7 фиксированных видов работ, затем свои виды.
+       ================================================================= */
+    function buildExcelBuffer(roomsString) {
+        const customTypes = [];
+        state.rooms.forEach(function (room) {
+            room.defects.forEach(function (def) {
+                if (EXCEL_ORDER.indexOf(def.type) === -1 && customTypes.indexOf(def.type) === -1) {
+                    customTypes.push(def.type);
+                }
+            });
+        });
+
+        const rows = [];
+        EXCEL_ORDER.forEach(function (type) {
+            const matching = [];
+            state.rooms.forEach(function (room) {
+                room.defects.forEach(function (def) {
+                    if (def.type === type) matching.push(def);
+                });
+            });
+            if (!matching.length) {
+                rows.push({ type: type, description: '' });
+            } else {
+                matching.forEach(function (def) {
+                    rows.push({ type: def.type, description: def.description || '' });
+                });
+            }
+        });
+        customTypes.forEach(function (customType) {
+            state.rooms.forEach(function (room) {
+                room.defects.forEach(function (def) {
+                    if (def.type === customType) {
+                        rows.push({ type: def.type, description: def.description || '' });
+                    }
+                });
+            });
+        });
+
+        const sheetData = rows.map(function (row) {
+            return [
+                '', state.date, state.objectBase, '', state.objectDetail, state.contractor, roomsString,
+                row.type, '', row.description
+            ];
+        });
+
+        const sheet = XLSX.utils.aoa_to_sheet(sheetData);
+        const book = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(book, sheet, 'Основные данные');
+        return XLSX.write(book, { bookType: 'xlsx', type: 'array' });
+    }
+
+    /* =================================================================
+       16. СБОРКА АРХИВА
+       ================================================================= */
+    function openExportSheet() {
+        if (!state.rooms.length) {
+            toast('Нет ни одного помещения', 'warn');
+            return;
+        }
+        const unnamed = state.rooms.filter(function (room) { return !room.name.trim(); });
+        if (unnamed.length) {
+            unnamed.forEach(function (room) { room.name = nextRoomName(); });
+            renderInspection();
+            scheduleSave();
+        }
+        const rooms = state.rooms.length;
+        const photos = totalPhotos();
+        const defects = totalDefects();
+        $('#sheet-export-summary').textContent =
+            rooms + ' ' + plural(rooms, 'помещение', 'помещения', 'помещений') + ', ' +
+            photos + ' ' + plural(photos, 'фото', 'фото', 'фото') + ', ' +
+            defects + ' ' + plural(defects, 'дефект', 'дефекта', 'дефектов') +
+            '. В архиве: таблица Excel с чек-листом и папки с фото. Объём — ' + formatBytes(totalBytes()) + '.';
+        openSheet('sheet-export');
+    }
+
+    function generateReport() {
+        if (exporting) {
+            toast('Архив уже собирается', 'info');
+            return;
+        }
+        exporting = true;
+        showBusy('Сборка архива…', true);
+        setBusyProgress(5);
+
+        ensureLibs().then(function () {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('ru-RU').replace(/\./g, '-');
+            const timeStr = now.toLocaleTimeString('ru-RU').replace(/:/g, '-');
+            const safeObjectName = (state.objectDetail !== 'Не указано' ? state.objectDetail : state.objectBase)
+                .replace(/[\/\\"']/g, '');
+            const excelFileName = safeObjectName + '_' + dateStr + '_' + timeStr + '.xlsx';
+            const roomsString = state.rooms.map(function (room) { return room.name; }).join('; ');
+
+            setBusyProgress(15);
+            const excelBuffer = buildExcelBuffer(roomsString);
+            const excelBlob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+
+            const zip = new JSZip();
+            zip.file(excelFileName, excelBlob);
+            const photosFolder = zip.folder('Папки с фото');
+
+            state.rooms.forEach(function (room) {
+                const safeRoomName = safeZipName(room.name);
+                if (!safeRoomName) return;
+                const roomFolder = photosFolder.folder(safeRoomName);
+
+                room.photos.forEach(function (photo, index) {
+                    const suffix = room.photos.length > 1 ? '_' + (index + 1) : '';
+                    roomFolder.file('Фото' + suffix + '.' + (photo.ext || 'jpg'), photo.blob);
+                });
+
+                if (room.defects.length) {
+                    const defectsFolder = roomFolder.folder('Дефекты');
+                    const groups = {};
+                    room.defects.forEach(function (def) {
+                        if (!groups[def.type]) groups[def.type] = [];
+                        groups[def.type].push(def);
+                    });
+                    Object.keys(groups).forEach(function (type) {
+                        const safeType = safeZipName(type);
+                        groups[type].forEach(function (def, index) {
+                            const typeFolder = defectsFolder.folder(safeType + ' (' + (index + 1) + ')');
+                            def.photos.forEach(function (photo, photoIndex) {
+                                const suffix = def.photos.length > 1 ? '_' + (photoIndex + 1) : '';
+                                typeFolder.file('Дефект' + suffix + '.' + (photo.ext || 'jpg'), photo.blob);
+                            });
+                        });
+                    });
+                }
+            });
+
+            setBusyProgress(25);
+            return zip.generateAsync({ type: 'blob' }, function (meta) {
+                setBusyProgress(25 + (Number(meta.percent) || 0) * 0.7);
+            }).then(function (content) {
+                const url = URL.createObjectURL(content);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'Осмотр_' + dateStr + '_' + safeObjectName + '.zip';
+                document.body.appendChild(link);
+                link.click();
+                /* ссылку убираем не сразу: некоторые браузеры
+                   отменяют скачивание при мгновенном удалении */
+                setTimeout(function () { link.remove(); }, 2000);
+                setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+
+                setBusyProgress(100);
+                saveNow();
+                renderDone();
+                goToScreen('done');
+                toast('Архив готов и скачивается', 'ok');
+            });
+        }).catch(function (err) {
+            console.error('Сборка архива:', err);
+            toast(err && err.message ? err.message : 'Не удалось собрать архив', 'err', 6000);
+        }).then(function () {
+            exporting = false;
+            hideBusy();
+        });
+    }
+
+    function renderDone() {
+        const rooms = state.rooms.length;
+        const photos = totalPhotos();
+        const defects = totalDefects();
+        $('#done-stats').innerHTML =
+            '<div class="stat"><b>' + rooms + '</b><span>' +
+                plural(rooms, 'помещение', 'помещения', 'помещений') + '</span></div>' +
+            '<div class="stat"><b>' + photos + '</b><span>фото</span></div>' +
+            '<div class="stat"><b>' + defects + '</b><span>' +
+                plural(defects, 'дефект', 'дефекта', 'дефектов') + '</span></div>';
+    }
+
+    function resetInspection() {
+        uiConfirm({
+            title: 'Новый осмотр?',
+            message: 'Черновик будет очищен. Скачанный архив останется в загрузках.',
+            okText: 'Очистить',
+            danger: true
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            state.date = '';
+            state.objectBase = '';
+            state.objectDetail = '';
+            state.objectLabel = '';
+            state.contractor = '';
+            state.rooms = [];
+            state.activeRoomId = null;
+            state.started = false;
+            Store.remove().catch(function (err) { console.warn('Черновик не удалён:', err); });
+            setSaveState('готов');
+
+            $('#select-object').value = '';
+            $('#select-contractor').value = '';
+            $('#input-object-custom').value = '';
+            $('#input-detail-custom').value = '';
+            $('#input-contractor-custom').value = '';
+            handleObjectChange();
+            handleContractorChange();
+            setTodayDate();
+            goToScreen('params', { silent: true });
+            toast('Готово к новому осмотру', 'ok');
+        });
+    }
+
+    /* =================================================================
+       17. ПРОВЕРКА ГОТОВНОСТИ
+       ================================================================= */
+    function renderSystemCheck() {
+        const hasCamera = !!(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function');
+        setLed('#chk-camera', hasCamera ? 'ok' : 'warn');
+        $('#chk-camera-note').textContent = hasCamera ? 'живое превью поддерживается' : 'только системная камера';
+
+        const libsReady = typeof window.JSZip !== 'undefined' && typeof window.XLSX !== 'undefined';
+        setLed('#chk-libs', libsReady ? 'ok' : 'warn');
+        $('#chk-libs-note').textContent = libsReady ? 'ZIP и XLSX готовы' : 'подгрузятся при выгрузке';
+
+        return Store.open().then(function () {
+            setLed('#chk-store', 'ok');
+            $('#chk-store-note').textContent = 'автосохранение включено';
+            setLed('#net-led', 'ok');
+        }).catch(function () {
+            setLed('#chk-store', 'warn');
+            $('#chk-store-note').textContent = 'без автосохранения';
+            setLed('#net-led', 'warn');
+        });
+    }
+
+    /* =================================================================
+       18. СОБЫТИЯ
+       ================================================================= */
+    function bindEvents() {
+        /* --- навигация --- */
+        $('#btn-start').addEventListener('click', function () { goToScreen('params'); });
+        $('#btn-params-back').addEventListener('click', function () { goToScreen('start'); });
+        $('#btn-start-inspection').addEventListener('click', startInspection);
+        $('#btn-defect-back').addEventListener('click', function () { goToScreen('inspection'); });
+        $('#btn-new-inspection').addEventListener('click', resetInspection);
+        $('#btn-back-to-inspection').addEventListener('click', function () {
+            if (state.rooms.length) goToScreen('inspection');
+            else goToScreen('params');
+        });
+        $('#btn-edit-params').addEventListener('click', function () {
+            if (!state.rooms.length) return;
+            fillParamsFromState();
+            goToScreen('params');
+        });
+
+        /* --- параметры --- */
+        $('#select-object').addEventListener('change', handleObjectChange);
+        $('#select-object-detail').addEventListener('change', handleDetailChange);
+        $('#select-contractor').addEventListener('change', handleContractorChange);
+
+        /* --- помещения --- */
+        $('#select-active-room').addEventListener('change', function (event) {
+            changeRoom(event.target.value);
+        });
+        $('#btn-room-add').addEventListener('click', function () { openRoomSheet('add'); });
+        $('#btn-room-rename').addEventListener('click', function () { openRoomSheet('rename'); });
+        $('#btn-room-delete').addEventListener('click', deleteRoom);
+        $('#room-ok').addEventListener('click', confirmRoomSheet);
+        $('#room-cancel').addEventListener('click', function () { closeSheet('sheet-room'); });
+        $('#room-name-input').addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                confirmRoomSheet();
+            }
+        });
+
+        /* --- фото комнаты --- */
+        $('#btn-shot').addEventListener('click', function () { openCamera({ kind: 'room' }); });
+        $('#btn-gallery').addEventListener('click', function () {
+            const room = activeRoom();
+            if (!room) return;
+            ensureRoomName(room);
+            openGallery();
+        });
+
+        $('#photo-grid').addEventListener('click', function (event) {
+            const target = event.target;
+            const del = target.closest ? target.closest('[data-del-photo]') : null;
+            if (del) {
+                event.preventDefault();
+                const room = activeRoom();
+                if (room) confirmDeletePhoto(room.photos, del.getAttribute('data-del-photo'));
+                return;
+            }
+            const thumb = target.closest ? target.closest('.thumb') : null;
+            if (thumb && target.tagName === 'IMG') {
+                const room = activeRoom();
+                const photo = room && room.photos.find(function (p) {
+                    return p.id === thumb.getAttribute('data-pid');
+                });
+                if (photo) openLightbox(photo);
+            }
+        });
+
+        /* --- дефекты --- */
+        $('#btn-add-defect').addEventListener('click', openDefectScreen);
+        $('#defect-list').addEventListener('click', function (event) {
+            const target = event.target;
+            const card = target.closest ? target.closest('[data-did]') : null;
+            if (!card) return;
+            const defectId = card.getAttribute('data-did');
+
+            const delPhoto = target.closest('[data-del-photo]');
+            if (delPhoto) {
+                event.preventDefault();
+                const room = activeRoom();
+                const def = room && room.defects.find(function (d) { return d.id === defectId; });
+                if (def) confirmDeletePhoto(def.photos, delPhoto.getAttribute('data-del-photo'));
+                return;
+            }
+
+            const action = target.closest('[data-act]');
+            if (!action) return;
+            const act = action.getAttribute('data-act');
+            if (act === 'del') deleteDefect(defectId);
+            else if (act === 'edit') editDefect(defectId);
+            else if (act === 'photo') openCamera({ kind: 'defect', id: defectId });
+        });
+
+        $('#defect-ok').addEventListener('click', confirmDefectSheet);
+        $('#defect-cancel').addEventListener('click', function () {
+            closeSheet('sheet-defect');
+            defectEditingId = null;
+        });
+        $('#other-ok').addEventListener('click', confirmOtherDefect);
+        $('#other-cancel').addEventListener('click', function () { closeSheet('sheet-other'); });
+
+        /* --- выгрузка --- */
+        $('#btn-export').addEventListener('click', openExportSheet);
+        $('#export-ok').addEventListener('click', function () {
+            closeSheet('sheet-export');
+            generateReport();
+        });
+        $('#export-cancel').addEventListener('click', function () { closeSheet('sheet-export'); });
+
+        /* --- подтверждение и черновик --- */
+        $('#confirm-ok').addEventListener('click', function () { resolveConfirm(true); });
+        $('#confirm-cancel').addEventListener('click', function () { resolveConfirm(false); });
+        $('#restore-open').addEventListener('click', applyDraft);
+        $('#restore-discard').addEventListener('click', discardDraft);
+
+        /* --- камера --- */
+        $('#cam-close').addEventListener('click', closeCamera);
+        $('#cam-shutter').addEventListener('click', captureShot);
+        $('#cam-torch').addEventListener('click', toggleTorch);
+        $('#cam-switch').addEventListener('click', switchCamera);
+        $('#cam-native').addEventListener('click', openNativeCamera);
+        $('#cam-native-link').addEventListener('click', openNativeCamera);
+        $('#cam-gallery').addEventListener('click', openGallery);
+        $('#cam-gallery-link').addEventListener('click', openGallery);
+        $('#cam-strip').addEventListener('click', function (event) {
+            const target = event.target;
+            const del = target.closest ? target.closest('[data-del-photo]') : null;
+            if (!del) return;
+            event.preventDefault();
+            confirmDeletePhoto(targetPhotos(cam.target), del.getAttribute('data-del-photo'));
+        });
+
+        $('#input-camera').addEventListener('change', onFilesPicked);
+        $('#input-gallery').addEventListener('change', onFilesPicked);
+
+        /* --- просмотр фото --- */
+        $('#lightbox-close').addEventListener('click', closeLightbox);
+        $('#lightbox').addEventListener('click', function (event) {
+            if (event.target === event.currentTarget) closeLightbox();
+        });
+
+        /* --- фон шторок --- */
+        $$('.overlay').forEach(function (overlay) {
+            overlay.addEventListener('click', function (event) {
+                if (event.target !== overlay) return;
+                if (overlay.id === 'sheet-confirm') {
+                    resolveConfirm(false);
+                    return;
+                }
+                closeSheet(overlay.id);
+                if (overlay.id === 'sheet-defect') defectEditingId = null;
+            });
+        });
+
+        /* --- снятие подсветки ошибки при вводе --- */
+        $$('.field').forEach(function (field) {
+            field.addEventListener('input', function () { field.classList.remove('invalid'); });
+        });
+        $('#room-name-input').addEventListener('input', function () {
+            $('#room-name-input').classList.remove('invalid');
+        });
+
+        /* --- клавиатура --- */
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') return;
+            if ($('#lightbox').classList.contains('open')) {
+                closeLightbox();
+                return;
+            }
+            const open = $$('.overlay.open');
+            if (open.length) {
+                const top = open[open.length - 1];
+                if (top.id === 'sheet-confirm') resolveConfirm(false);
+                else closeSheet(top.id);
+                return;
+            }
+            if (cam.open) closeCamera();
+        });
+
+        /* --- кнопка «Назад» на Android --- */
+        window.addEventListener('popstate', function (event) {
+            if (cam.open) {
+                closeCamera();
+                return;
+            }
+            const name = event.state && event.state.screen;
+            if (name && SCREENS.indexOf(name) !== -1) {
+                goToScreen(name, { silent: true });
+            } else {
+                goToScreen('start', { silent: true });
+            }
+        });
+
+        /* --- сворачивание вкладки --- */
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) saveNow();
+            if (!cam.open) return;
+            if (document.hidden) stopLiveCamera();
+            else if (cam.mode === 'live') startLiveCamera();
+        });
+
+        /* --- глобальные ошибки --- */
+        window.addEventListener('unhandledrejection', function (event) {
+            console.error('Необработанная ошибка:', event.reason);
+            toast('Что-то пошло не так — действие не выполнено', 'err', 4000);
+        });
+        window.addEventListener('error', function (event) {
+            console.error('Ошибка страницы:', event.message || event);
+        });
+    }
+
+    /* =================================================================
+       19. УСТАНОВКА ПРИЛОЖЕНИЯ (PWA)
+       Manifest + service worker + кнопка установки.
+       Работает только по https или на localhost.
+       ================================================================= */
+    let deferredInstallPrompt = null;
+
+    function isStandalone() {
+        try {
+            if (window.matchMedia('(display-mode: standalone)').matches) return true;
+            if (window.matchMedia('(display-mode: fullscreen)').matches) return true;
+            if (window.matchMedia('(display-mode: minimal-ui)').matches) return true;
+        } catch (err) { /* старый браузер */ }
+        return window.navigator.standalone === true;
+    }
+
+    function isIOSDevice() {
+        return /iphone|ipad|ipod/i.test(navigator.userAgent || '');
+    }
+
+    function showInstallCard(mode) {
+        if (isStandalone()) return;
+        const card = $('#install-card');
+        if (!card) return;
+        card.hidden = false;
+        const button = $('#btn-install');
+        const hint = $('#install-hint');
+        if (mode === 'prompt') {
+            button.hidden = false;
+            hint.hidden = true;
+            return;
+        }
+        button.hidden = true;
+        hint.hidden = false;
+        hint.textContent = isIOSDevice()
+            ? 'В Safari нажмите «Поделиться» → «На экран „Домой“».'
+            : 'Откройте меню браузера (⋮) и выберите «Установить приложение» или «Добавить на главный экран».';
+    }
+
+    function setupInstall() {
+        if (isStandalone()) return;
+
+        window.addEventListener('beforeinstallprompt', function (event) {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+            showInstallCard('prompt');
+        });
+
+        window.addEventListener('appinstalled', function () {
+            deferredInstallPrompt = null;
+            const card = $('#install-card');
+            if (card) card.hidden = true;
+            toast('Приложение установлено', 'ok', 4000);
+        });
+
+        const button = $('#btn-install');
+        if (button) {
+            button.addEventListener('click', function () {
+                if (!deferredInstallPrompt) {
+                    toast('Установка через меню браузера: ⋮ → «Установить приложение»', 'info', 4500);
+                    return;
+                }
+                const prompt = deferredInstallPrompt;
+                deferredInstallPrompt = null;
+                try {
+                    prompt.prompt();
+                } catch (err) {
+                    toast('Браузер не дал запустить установку', 'warn');
+                    return;
+                }
+                const choice = prompt.userChoice;
+                if (choice && typeof choice.then === 'function') {
+                    choice.then(function (result) {
+                        if (result && result.outcome === 'accepted') toast('Установка запущена', 'ok');
+                    }).catch(function () { /* пользователь закрыл окно */ });
+                }
+            });
+        }
+
+        /* Браузеры без промпта (Яндекс, Safari) — показываем подсказку */
+        if (location.protocol === 'https:' || location.protocol === 'http:') {
+            setTimeout(function () {
+                if (!deferredInstallPrompt) showInstallCard('hint');
+            }, 3500);
+        }
+    }
+
+    function registerServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (location.protocol !== 'https:' && !isLocal) return;
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('sw.js').catch(function (err) {
+                console.warn('Service worker не зарегистрирован:', err);
+            });
+        });
+    }
+
+    /* =================================================================
+       20. ЗАПУСК
+       ================================================================= */
+    function init() {
+        try {
+            bindEvents();
+            setTodayDate();
+            if (window.history && history.replaceState) {
+                try { history.replaceState({ screen: 'start' }, ''); } catch (err) { /* file:// */ }
+            }
+            renderSystemCheck();
+            checkDraft();
+            setupInstall();
+            registerServiceWorker();
+            /* Библиотеки подтягиваем в фоне: сначала папка vendor,
+               затем CDN. Без сети съёмка работает, ждёт только выгрузка. */
+            ensureLibs().then(function () {
+                renderSystemCheck();
+            }).catch(function () {
+                /* тихо: индикатор на стартовом экране уже предупредил */
+            });
+        } catch (err) {
+            console.error('Инициализация приложения:', err);
+            toast('Ошибка запуска приложения', 'err', 5000);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
