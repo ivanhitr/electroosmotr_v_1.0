@@ -562,6 +562,27 @@
         .defect-desc { margin-top: 2px; font-size: 12.5px; color: var(--text-2); overflow-wrap: anywhere; }
         .defect-actions { display: flex; gap: 6px; flex: 0 0 auto; }
         .defect-actions .icon-btn { width: 32px; height: 32px; }
+        /* Дефект снят с отчёта — карточка приглушена */
+        .defect-card.excluded { opacity: .55; }
+        .defect-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 12.5px;
+            color: var(--text-2);
+            cursor: pointer;
+            user-select: none;
+        }
+        .defect-toggle input {
+            width: 17px;
+            height: 17px;
+            margin: 0;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .defect-toggle input:disabled { cursor: default; opacity: .85; }
+        .muted { opacity: .6; }
         .thumb-row {
             display: flex;
             gap: 8px;
@@ -614,6 +635,14 @@
         }
         .type-btn .type-name { flex: 1; }
         .type-btn.is-other { color: #fcd34d; border-color: rgba(251, 191, 36, .32); }
+
+        /* Свои виды работ стоят в том же списке, справа — удаление */
+        .type-item { display: block; }
+        .type-row { display: flex; gap: 8px; align-items: stretch; }
+        .type-row .type-btn { flex: 1; min-width: 0; }
+        .type-row .type-forget { width: 46px; height: auto; flex: 0 0 auto; }
+        .type-btn.is-custom { border-color: rgba(34, 211, 238, .26); }
+        .type-btn.is-custom .num { color: var(--accent); }
 
         /* =================================================================
            12. НИЖНЯЯ ПАНЕЛЬ
@@ -1630,6 +1659,10 @@
     const DB_VER = 1;
     const DB_STORE = 'drafts';
     const DRAFT_KEY = 'current';
+    /* Свои виды работ («Другое») живут отдельным ключом того же хранилища:
+       версия базы не меняется — текущие черновики не теряются. */
+    const CUSTOM_KEY = 'customTypes';
+    const MAX_CUSTOM_TYPES = 50;
 
     /* =================================================================
        2. СОСТОЯНИЕ
@@ -1640,9 +1673,10 @@
         objectDetail: '',
         objectLabel: '',
         contractor: '',
-        rooms: [],          // [{ id, name, photos: [Photo], defects: [{ id, type, description, photos }] }]
+        rooms: [],          // [{ id, name, photos: [Photo], defects: [{ id, type, description, photos, includeInExcel }] }]
         activeRoomId: null,
-        started: false
+        started: false,
+        customTypes: []     // свои виды работ, введённые через «Другое»
     };
 
     let currentScreen = 'start';
@@ -1904,6 +1938,15 @@
 
         remove: function () {
             return this.transaction('readwrite', function (store) { return store.delete(DRAFT_KEY); });
+        },
+
+        /* Произвольный ключ: используется для списка своих видов работ */
+        getKey: function (key) {
+            return this.transaction('readonly', function (store) { return store.get(key); });
+        },
+
+        putKey: function (key, value) {
+            return this.transaction('readwrite', function (store) { return store.put(value, key); });
         }
     };
 
@@ -1961,6 +2004,7 @@
                             id: def.id,
                             type: def.type,
                             description: def.description,
+                            includeInExcel: def.includeInExcel !== false,
                             photos: def.photos.map(function (p) { return Object.assign({}, p); })
                         };
                     })
@@ -1998,6 +2042,8 @@
                             id: String(d.id || uid()),
                             type: String(d.type || 'Дефект'),
                             description: String(d.description || ''),
+                            /* старые черновики без поля считаем отмеченными */
+                            includeInExcel: d.includeInExcel !== false,
                             photos: (Array.isArray(d.photos) ? d.photos : []).map(normalizePhoto).filter(Boolean)
                         };
                     })
@@ -2509,13 +2555,16 @@
             return;
         }
         list.innerHTML = room.defects.map(function (def) {
+            const custom = isCustomType(def.type);
+            const reported = custom || def.includeInExcel !== false;
             const thumbs = def.photos.map(function (photo) {
                 return thumbMarkup(photo, 'Фото дефекта');
             }).join('');
             const description = def.description
                 ? escapeHtml(def.description)
-                : '<span style="opacity:.6">без описания</span>';
-            return '<div class="defect-card" data-did="' + escapeHtml(def.id) + '">' +
+                : '<span class="muted">без описания</span>';
+            return '<div class="defect-card' + (reported ? '' : ' excluded') + '" data-did="' +
+                    escapeHtml(def.id) + '">' +
                 '<div class="defect-head">' +
                     '<span class="defect-icon"><svg><use href="#i-alert"/></svg></span>' +
                     '<div class="defect-text">' +
@@ -2529,6 +2578,11 @@
                             '<svg><use href="#i-trash"/></svg></button>' +
                     '</div>' +
                 '</div>' +
+                '<label class="defect-toggle">' +
+                    '<input type="checkbox" data-act="toggle" ' +
+                        (reported ? 'checked ' : '') + (custom ? 'disabled ' : '') + '>' +
+                    '<span>' + (custom ? 'Всегда в отчёте' : 'В отчёте (Excel)') + '</span>' +
+                '</label>' +
                 '<div class="thumb-row">' + thumbs +
                     '<figure class="thumb thumb-add" data-act="photo" role="button" tabindex="0" ' +
                         'aria-label="Добавить фото дефекта">+</figure>' +
@@ -2631,14 +2685,35 @@
         const list = $('#defect-type-list');
         if (!list) return;
         list.innerHTML = '';
-        DEFECT_TYPES.forEach(function (type, index) {
+
+        /* Стандартные виды работ + сохранённые «свои» — одним списком */
+        DEFECT_TYPES.concat(state.customTypes).forEach(function (type, index) {
+            const custom = isCustomType(type);
+            const row = document.createElement('div');
+            row.className = custom ? 'type-row' : 'type-item';
+
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'type-btn' + (type === 'Другое' ? ' is-other' : '');
+            button.className = 'type-btn' +
+                (type === 'Другое' ? ' is-other' : '') +
+                (custom ? ' is-custom' : '');
             button.innerHTML = '<span class="num">' + String(index + 1).padStart(2, '0') + '</span>' +
                 '<span class="type-name">' + escapeHtml(type) + '</span>';
             button.addEventListener('click', function () { pickDefectType(type); });
-            list.appendChild(button);
+            row.appendChild(button);
+
+            if (custom) {
+                const forget = document.createElement('button');
+                forget.type = 'button';
+                forget.className = 'icon-btn danger type-forget';
+                forget.title = 'Удалить из списка';
+                forget.setAttribute('aria-label', 'Удалить «' + type + '» из списка');
+                forget.innerHTML = '<svg><use href="#i-trash"/></svg>';
+                forget.addEventListener('click', function () { forgetCustomType(type); });
+                row.appendChild(forget);
+            }
+
+            list.appendChild(row);
         });
     }
 
@@ -2672,6 +2747,66 @@
         }, 130);
     }
 
+    /* =================================================================
+       СВОИ ВИДЫ РАБОТ («Другое»)
+       Название сохраняется на устройстве и встаёт в общий список рядом
+       со стандартными. Удалить можно в любой момент.
+       ================================================================= */
+    function isCustomType(type) {
+        return DEFECT_TYPES.indexOf(type) === -1;
+    }
+
+    function loadCustomTypes() {
+        return Store.getKey(CUSTOM_KEY).then(function (record) {
+            const items = record && Array.isArray(record.items) ? record.items : [];
+            state.customTypes = items
+                .filter(function (item) {
+                    return typeof item === 'string' && item.trim() &&
+                        DEFECT_TYPES.indexOf(item.trim()) === -1;
+                })
+                .map(function (item) { return item.trim(); })
+                .slice(0, MAX_CUSTOM_TYPES);
+        }).catch(function (err) {
+            console.warn('Свои виды работ не прочитаны:', err);
+            state.customTypes = [];
+        });
+    }
+
+    function saveCustomTypes() {
+        Store.putKey(CUSTOM_KEY, { v: 1, items: state.customTypes }).catch(function (err) {
+            console.warn('Свои виды работ не сохранены:', err);
+            toast('Не удалось сохранить вид работ для будущих осмотров', 'warn', 4000);
+        });
+    }
+
+    function rememberCustomType(name) {
+        const clean = String(name || '').trim();
+        if (!clean || DEFECT_TYPES.indexOf(clean) !== -1) return;
+        const exists = state.customTypes.some(function (item) {
+            return item.toLowerCase() === clean.toLowerCase();
+        });
+        if (exists) return;
+        state.customTypes.push(clean);
+        if (state.customTypes.length > MAX_CUSTOM_TYPES) state.customTypes.shift();
+        saveCustomTypes();
+    }
+
+    function forgetCustomType(name) {
+        uiConfirm({
+            title: 'Удалить вид работ?',
+            message: '«' + name + '» исчезнет из списка для будущих осмотров. ' +
+                'Уже добавленные дефекты останутся в текущем осмотре.',
+            okText: 'Удалить',
+            danger: true
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            state.customTypes = state.customTypes.filter(function (item) { return item !== name; });
+            saveCustomTypes();
+            renderDefectTypes();
+            toast('Вид работ удалён из списка');
+        });
+    }
+
     function confirmDefectSheet() {
         const room = activeRoom();
         if (!room) return;
@@ -2692,6 +2827,7 @@
             id: uid(),
             type: defectDraftType,
             description: description,
+            includeInExcel: true,
             photos: []
         };
         room.defects.push(defect);
@@ -2715,11 +2851,15 @@
             id: uid(),
             type: name,
             description: cleanDescription($('#other-desc-input').value),
+            includeInExcel: true,
             photos: []
         };
         room.defects.push(defect);
+        /* Запоминаем название для будущих осмотров */
+        rememberCustomType(name);
         closeSheet('sheet-other');
         renderInspection();
+        renderDefectTypes();
         scheduleSave();
         openCamera({ kind: 'defect', id: defect.id });
     }
@@ -3497,7 +3637,36 @@
        лист «Основные данные», 10 колонок в прежнем порядке,
        те же 7 фиксированных видов работ, затем свои виды.
        ================================================================= */
-    function buildExcelBuffer(roomsString) {
+    /* В таблицу попадают только отмеченные дефекты: строк ровно столько,
+       сколько галочек. «Свои» виды работ («Другое») — всегда. */
+    function defectGoesToReport(defect) {
+        if (isCustomType(defect.type)) return true;
+        return defect.includeInExcel !== false;
+    }
+
+    function countReportDefects() {
+        let count = 0;
+        state.rooms.forEach(function (room) {
+            room.defects.forEach(function (def) {
+                if (defectGoesToReport(def)) count++;
+            });
+        });
+        return count;
+    }
+
+    function collectReportRows() {
+        const rows = [];
+        const collect = function (type) {
+            state.rooms.forEach(function (room) {
+                room.defects.forEach(function (def) {
+                    if (def.type === type && defectGoesToReport(def)) {
+                        rows.push({ type: def.type, description: def.description || '' });
+                    }
+                });
+            });
+        };
+
+        /* Порядок: сначала фиксированные виды работ, затем свои — как в 0.0 */
         const customTypes = [];
         state.rooms.forEach(function (room) {
             room.defects.forEach(function (def) {
@@ -3507,32 +3676,13 @@
             });
         });
 
-        const rows = [];
-        EXCEL_ORDER.forEach(function (type) {
-            const matching = [];
-            state.rooms.forEach(function (room) {
-                room.defects.forEach(function (def) {
-                    if (def.type === type) matching.push(def);
-                });
-            });
-            if (!matching.length) {
-                rows.push({ type: type, description: '' });
-            } else {
-                matching.forEach(function (def) {
-                    rows.push({ type: def.type, description: def.description || '' });
-                });
-            }
-        });
-        customTypes.forEach(function (customType) {
-            state.rooms.forEach(function (room) {
-                room.defects.forEach(function (def) {
-                    if (def.type === customType) {
-                        rows.push({ type: def.type, description: def.description || '' });
-                    }
-                });
-            });
-        });
+        EXCEL_ORDER.forEach(collect);
+        customTypes.forEach(collect);
+        return rows;
+    }
 
+    function buildExcelBuffer(roomsString) {
+        const rows = collectReportRows();
         const sheetData = rows.map(function (row) {
             return [
                 '', state.date, state.objectBase, '', state.objectDetail, state.contractor, roomsString,
@@ -3541,6 +3691,9 @@
         });
 
         const sheet = XLSX.utils.aoa_to_sheet(sheetData);
+        /* Все галочки сняты: лист без строк, но с корректным диапазоном */
+        if (!sheetData.length) sheet['!ref'] = 'A1';
+
         const book = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(book, sheet, 'Основные данные');
         return XLSX.write(book, { bookType: 'xlsx', type: 'array' });
@@ -3563,11 +3716,20 @@
         const rooms = state.rooms.length;
         const photos = totalPhotos();
         const defects = totalDefects();
-        $('#sheet-export-summary').textContent =
-            rooms + ' ' + plural(rooms, 'помещение', 'помещения', 'помещений') + ', ' +
-            photos + ' ' + plural(photos, 'фото', 'фото', 'фото') + ', ' +
-            defects + ' ' + plural(defects, 'дефект', 'дефекта', 'дефектов') +
-            '. В архиве: таблица Excel с чек-листом и папки с фото. Объём — ' + formatBytes(totalBytes()) + '.';
+        const reported = countReportDefects();
+        let summary = rooms + ' ' + plural(rooms, 'помещение', 'помещения', 'помещений') + ', ' +
+            photos + ' ' + plural(photos, 'фото', 'фото', 'фото') + '. ';
+        if (defects === 0) {
+            summary += 'Дефектов нет — таблица будет пустой. ';
+        } else if (reported === 0) {
+            summary += 'Дефектов: ' + defects + ', в отчёт не попадёт ни один. ' +
+                'Отметьте нужные галочкой «В отчёте» — иначе таблица будет пустой. ';
+        } else {
+            summary += 'Дефектов: ' + defects + ', в отчёт попадёт ' + reported + '. ';
+        }
+        summary += 'В архиве: таблица Excel с отмеченными дефектами и папки с фото. ' +
+            'Объём — ' + formatBytes(totalBytes()) + '.';
+        $('#sheet-export-summary').textContent = summary;
         openSheet('sheet-export');
     }
 
@@ -3818,8 +3980,28 @@
             else if (act === 'photo') openCamera({ kind: 'defect', id: defectId });
         });
 
-        $('#defect-ok').addEventListener('click', confirmDefectSheet);
-        $('#defect-cancel').addEventListener('click', function () {
+        /* Чекбокс «В отчёте»: попадает ли дефект в Excel */
+        $('#defect-list').addEventListener('change', function (event) {
+            const input = event.target;
+            if (!input || input.getAttribute('data-act') !== 'toggle') return;
+            const card = input.closest('[data-did]');
+            if (!card) return;
+            const room = activeRoom();
+            const defect = room && room.defects.find(function (d) {
+                return d.id === card.getAttribute('data-did');
+            });
+            if (!defect) return;
+            /* «Свои» виды работ всегда в отчёте */
+            if (isCustomType(defect.type)) {
+                input.checked = true;
+                return;
+            }
+            defect.includeInExcel = input.checked;
+            card.classList.toggle('excluded', !input.checked);
+            scheduleSave();
+        });
+
+        $('#defect-ok').addEventListener('click', confirmDefectSheet);        $('#defect-cancel').addEventListener('click', function () {
             closeSheet('sheet-defect');
             defectEditingId = null;
         });
@@ -4048,6 +4230,9 @@
             checkDraft();
             setupInstall();
             registerServiceWorker();
+            loadCustomTypes().then(function () {
+                if (currentScreen === 'defect') renderDefectTypes();
+            });
             /* Библиотеки подтягиваем в фоне: сначала папка vendor,
                затем CDN. Без сети съёмка работает, ждёт только выгрузка. */
             ensureLibs().then(function () {
